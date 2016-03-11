@@ -4,7 +4,7 @@ function sampleTransformations(nSamp,sampleSize)
     plotCol = 4;
 
     % get many bivariate normal samples as membrane potential
-    nBin = 100;
+    nBin = 25;
     nTrial = 10000;    
     mu = [1 1];
     C = [1 0.5; 0.5 1];
@@ -20,22 +20,26 @@ function sampleTransformations(nSamp,sampleSize)
     
     subplot(plotRow,plotCol,1)
     ndhist(samples(1,:,1),samples(1,:,2));
+    title('V_i','FontSize',16)
     
     % rectify
     samples = samples - theta;
     samples(samples < 0) = 0;
     subplot(plotRow,plotCol,2)
     scatter(samples(1,:,1),samples(1,:,2))
+    title('V_i^{\theta+}','FontSize',16)
     
     % transform with k and beta
     samples = k * (samples .^ beta);
     subplot(plotRow,plotCol,3)
     scatter(samples(1,:,1),samples(1,:,2))
+    title('r_i','FontSize',16)
     
     % sum
     samples = squeeze(sum(samples,1));
     subplot(plotRow,plotCol,4)
     ndhist(samples(:,1),samples(:,2));
+    title('r','FontSize',16)
     
     % floor
 end
