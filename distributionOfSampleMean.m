@@ -7,6 +7,7 @@ function distributionOfSampleMean(nSamp,shape,scale)
     
     sampleSizes = [20 50 100];
     nSampSize = length(sampleSizes);
+    plotCol = 2;
     
     for i=1:nSampSize
         sampleSize = sampleSizes(i);
@@ -19,12 +20,14 @@ function distributionOfSampleMean(nSamp,shape,scale)
             sampleVars = [sampleVars; var(actSamp)];
         end
 
-        subplot(nSampSize,3,(i-1)*3+1)
-        x = linspace(0,5,100);
-        plot(x,gampdf(x,shape,scale),'LineWidth',2);
-        ylabel(sprintf('sample size = %d',sampleSize),'FontSize',16)
+%         subplot(nSampSize,plotCol,(i-1)*plotCol+1)
+%         x = linspace(0,5,100);
+%         plot(x,gampdf(x,shape,scale),'LineWidth',2);        
+%         if i==1
+%             title(sprintf('Gamma pdf shape=%d scale=%d',shape,scale),'FontSize',16)
+%         end
 
-        subplot(nSampSize,3,(i-1)*3+2)
+        subplot(nSampSize,plotCol,(i-1)*plotCol+1)
         histogram(sampleMeans,50,'Normalization','pdf')
         hold on
         limits = xlim();
@@ -34,8 +37,12 @@ function distributionOfSampleMean(nSamp,shape,scale)
             pdf(j) = normpdf(x(j),trueMean,trueSD/sqrt(sampleSize));
         end
         plot(x,pdf,'LineWidth',3)
+        if i==1
+            title(sprintf('Sample means from %d samples',nSamp),'FontSize',16)
+        end
+        ylabel(sprintf('sample size = %d',sampleSize),'FontSize',16)
         
-        subplot(nSampSize,3,(i-1)*3+3)
+        subplot(nSampSize,plotCol,(i-1)*plotCol+2)
         histogram(sampleVars,50,'Normalization','pdf')
         hold on
         limits = xlim();
@@ -45,6 +52,9 @@ function distributionOfSampleMean(nSamp,shape,scale)
             pdf(j) = pearsonType3(x(j),sampleSize,trueVar);
         end
         plot(x,pdf,'LineWidth',3)
+        if i==1
+            title(sprintf('Sample variances from %d samples',nSamp),'FontSize',16)
+        end
     end
 
 

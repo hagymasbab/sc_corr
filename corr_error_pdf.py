@@ -29,34 +29,54 @@ def lognormal_corr(C):
     return (exp(rho_n * sd1_n * sd2_n) - 1) / sqrt((exp(var1_n) - 1) * (exp(var2_n) - 1))
 
 
-lognorm = True
 nSamples = 10000
-sampleSize = 100
-covN = 0.9
+sampleSize = 10
+covN = 0.6
 C = np.array([[1, covN], [covN, 1]])
-if lognorm:
-    trueR = lognormal_corr(C)
-else:
-    trueR = C[0, 1] / sqrt(C[0, 0] * C[1, 1])
-print(trueR)
-
-corrVals = zeros((nSamples, 1))
-for i in range(nSamples):
-    actSamp = rnd.multivariate_normal([0, 0], C, sampleSize)
-    if lognorm:
-        actSamp = exp(actSamp)
-    corrVals[i] = corrcoef(actSamp.T)[1, 0]
-
-plt.hist(corrVals, 50, normed=1)
+trueR_lN = lognormal_corr(C)
+trueR_N = C[0, 1] / sqrt(C[0, 0] * C[1, 1])
 
 stepsize = 0.01
 stepnum = int(floor(2 / stepsize))
 pdf = zeros((stepnum, 1))
 x = zeros((stepnum, 1))
-for i in range(stepnum):
-    x[i] = -1 + stepsize * i
-    pdf[i] = corr_error_pdf(trueR, x[i], sampleSize)
 
-plt.plot(x, pdf, color='g', linewidth=3)
-plt.plot([trueR, trueR], [0, plt.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
+sampleSizes = [20, 50, 100]
+nSampSize = len(sampleSizes)
+
+for ns in range(nSampSize):
+    sampleSize = sampleSizes[ns]
+    corrVals_N = zeros((nSamples, 1))
+    corrVals_lN = zeros((nSamples, 1))
+    for i in range(nSamples):
+        actSamp = rnd.multivariate_normal([0, 0], C, sampleSize)
+        corrVals_N[i] = corrcoef(actSamp.T)[1, 0]
+        actSamp = exp(actSamp)
+        corrVals_lN[i] = corrcoef(actSamp.T)[1, 0]
+
+    plt.subplot(nSampSize * 100 + 20 + ns * 2 + 1)
+    plt.hist(corrVals_N, 50, normed=1)
+
+    for i in range(stepnum):
+        x[i] = -1 + stepsize * i
+        pdf[i] = corr_error_pdf(trueR_N, x[i], sampleSize)
+
+    plt.plot(x, pdf, color='g', linewidth=3)
+    plt.plot([trueR_N, trueR_N], [0, plt.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
+    if ns == 0:
+        plt.title('Gaussian')
+    plt.ylabel('Sample size = %d' % sampleSize)
+
+    plt.subplot(nSampSize * 100 + 20 + ns * 2 + 2)
+
+    plt.hist(corrVals_lN, 50, normed=1)
+
+    for i in range(stepnum):
+        x[i] = -1 + stepsize * i
+        pdf[i] = corr_error_pdf(trueR_lN, x[i], sampleSize)
+
+    plt.plot(x, pdf, color='g', linewidth=3)
+    plt.plot([trueR_lN, trueR_lN], [0, plt.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
+    if ns == 0:
+        plt.title('Lognormal')
 plt.show()
