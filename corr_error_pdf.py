@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import zeros, floor, exp, corrcoef
 from scipy import pi, sqrt
+from scipy.io import loadmat
 from scipy.special import hyp2f1, gamma
 import matplotlib.pyplot as plt
 import numpy.random as rnd
@@ -29,8 +30,7 @@ def lognormal_corr(C):
     return (exp(rho_n * sd1_n * sd2_n) - 1) / sqrt((exp(var1_n) - 1) * (exp(var2_n) - 1))
 
 
-nSamples = 10000
-sampleSize = 10
+nSamples = 1000
 covN = 0.6
 C = np.array([[1, covN], [covN, 1]])
 trueR_lN = lognormal_corr(C)
@@ -41,6 +41,12 @@ stepnum = int(floor(2 / stepsize))
 pdf = zeros((stepnum, 1))
 x = zeros((stepnum, 1))
 
+lsc = loadmat('/Users/karaj/csnl/majom/data/SC_nat_atoc100a01_bin10.mat')
+sc = np.sum(lsc['spikeCount'][0:2, :, 1:51], axis=2)
+N = sc.shape[1]
+trueR_N = corrcoef(sc)[0, 1]
+print(sc.shape)
+
 sampleSizes = [20, 50, 100]
 nSampSize = len(sampleSizes)
 
@@ -49,8 +55,10 @@ for ns in range(nSampSize):
     corrVals_N = zeros((nSamples, 1))
     corrVals_lN = zeros((nSamples, 1))
     for i in range(nSamples):
+        actSamp = sc[:, np.random.choice(sc.shape[1], sampleSize, replace=False)]
+        print(actSamp.shape)
+        corrVals_N[i] = corrcoef(actSamp)[1, 0]
         actSamp = rnd.multivariate_normal([0, 0], C, sampleSize)
-        corrVals_N[i] = corrcoef(actSamp.T)[1, 0]
         actSamp = exp(actSamp)
         corrVals_lN[i] = corrcoef(actSamp.T)[1, 0]
 

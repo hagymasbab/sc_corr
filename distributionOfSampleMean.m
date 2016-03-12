@@ -1,13 +1,20 @@
 function distributionOfSampleMean(nSamp,shape,scale)
     close all
 
-    trueMean = shape*scale;
-    trueVar = shape*scale^2;
-    trueSD = sqrt(shape*scale^2);
+    lsc = load('/Users/karaj/csnl/majom/data/SC_nat_atoc100a01_bin10.mat');
+    spikeCount = squeeze(sum(lsc.spikeCount(1,:,1:50),3))';
+    N = length(spikeCount);
+    
+%     trueMean = shape*scale;
+%     trueVar = shape*scale^2;
+    trueMean = mean(spikeCount);
+    trueVar = var(spikeCount);
+
+    trueSD = sqrt(trueVar);
     
     sampleSizes = [20 50 100];
     nSampSize = length(sampleSizes);
-    plotCol = 2;
+    plotCol = 2;    
     
     for i=1:nSampSize
         sampleSize = sampleSizes(i);
@@ -15,7 +22,8 @@ function distributionOfSampleMean(nSamp,shape,scale)
         sampleMeans = [];
         sampleVars = [];
         for s=1:nSamp
-            actSamp = gamrnd(shape,scale,[sampleSize 1]);
+            %actSamp = gamrnd(shape,scale,[sampleSize 1]);
+            actSamp = spikeCount(chooseKfromN(sampleSize,N));
             sampleMeans = [sampleMeans; mean(actSamp)];
             sampleVars = [sampleVars; var(actSamp)];
         end
