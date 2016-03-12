@@ -62,7 +62,7 @@ for ns in range(nSampSize):
         actSamp = exp(actSamp)
         corrVals_lN[i] = corrcoef(actSamp.T)[1, 0]
 
-    plt.subplot(nSampSize * 100 + 20 + ns * 2 + 1)
+    plt.subplot(100 + nSampSize * 10 + ns + 1)
     plt.hist(corrVals_N, 50, normed=1)
 
     for i in range(stepnum):
@@ -71,20 +71,20 @@ for ns in range(nSampSize):
 
     plt.plot(x, pdf, color='g', linewidth=3)
     plt.plot([trueR_N, trueR_N], [0, plt.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
-    if ns == 0:
-        plt.title('Gaussian')
-    plt.ylabel('Sample size = %d' % sampleSize)
+    # if ns == 0:
+    #     plt.title('Gaussian')
+    plt.title('Sample size = %d' % sampleSize)
 
-    plt.subplot(nSampSize * 100 + 20 + ns * 2 + 2)
+    # plt.subplot(nSampSize * 100 + 20 + ns * 2 + 2)
 
-    plt.hist(corrVals_lN, 50, normed=1)
+    # plt.hist(corrVals_lN, 50, normed=1)
 
-    for i in range(stepnum):
-        x[i] = -1 + stepsize * i
-        pdf[i] = corr_error_pdf(trueR_lN, x[i], sampleSize)
+    # for i in range(stepnum):
+    #     x[i] = -1 + stepsize * i
+    #     pdf[i] = corr_error_pdf(trueR_lN, x[i], sampleSize)
 
-    plt.plot(x, pdf, color='g', linewidth=3)
-    plt.plot([trueR_lN, trueR_lN], [0, plt.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
-    if ns == 0:
-        plt.title('Lognormal')
+    # plt.plot(x, pdf, color='g', linewidth=3)
+    # plt.plot([trueR_lN, trueR_lN], [0, plt.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
+    # if ns == 0:
+    #     plt.title('Lognormal')
 plt.show()
