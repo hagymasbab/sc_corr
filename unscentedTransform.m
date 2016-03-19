@@ -1,12 +1,20 @@
-function [UT_mu, UT_cov] = unscentedTransform(mu, C, nonlinfunc)
-    standardSigmaPoints = [0 -sqrt(3/2) sqrt(3/2); sqrt(2) -sqrt(1/2) -sqrt(1/2)];
-    sigmaPoints = zeros(size(standardSigmaPoints));
-    transformedSigmaPoints = zeros(size(sigmaPoints));
+function [UT_mu, UT_cov, sigmaPoints, transformedSigmaPoints] = unscentedTransform(mu, C, nonlinfunc)
+    dim = length(mu);
     srC = sqrtm(C);
-    for i = 1:size(sigmaPoints,2)
-        sigmaPoints(:,i) = srC * standardSigmaPoints(:,i) + mu;
-        transformedSigmaPoints(:,i) = nonlinfunc(sigmaPoints(:,i));
+    
+    sigmaPoints = zeros(dim,2*dim+1);    
+    for i = 1:size(sigmaPoints,2)-1
+        row = ceil(i/2);
+        if mod(i,2) == 0
+            sgn = 1;
+        else
+            sgn = -1;
+        end
+        sigmaPoints(:,i) = sqrt(2) * sgn * srC(row,:)' + mu;        
     end
+    sigmaPoints(:,end) = mu;
+    
+    transformedSigmaPoints = nonlinfunc(sigmaPoints')';
     UT_mu = mean(transformedSigmaPoints,2);
     UT_cov = cov(transformedSigmaPoints',1);
 end
