@@ -4,17 +4,17 @@ import numpy.random as rnd
 from pystan import StanModel
 import matplotlib.pyplot as pl
 
-recompile = True
+recompile = False
 
-n_trial = 50
-n_bin = 10
+n_trial = 100
+n_bin = 25
 base_rate = 10
 threshold = 1.9
 exponent = 1.1
 
-mu_mp = [1, 1]
-mp_corr = 0.4
-C_mp = np.identity(2)  # variance is unit int this test
+mu_mp = [10, 10]
+mp_corr = -0.4
+C_mp = np.identity(2)  # variance is unit in this test
 C_mp[0, 1] = mp_corr
 C_mp[1, 0] = C_mp[0, 1]
 U = rnd.multivariate_normal(mu_mp, C_mp, (n_trial, n_bin))
@@ -40,14 +40,15 @@ corr_dat = {
     'sc_mean_vec': sc_mean_vec,
     'sc_var_vec': sc_var_vec,
     'mp_mean_prior_mean': 1,
-    'mp_mean_prior_var': 0.1,
+    'mp_mean_prior_var': 1,
     'mp_var_prior_shape': 1,
     'mp_var_prior_scale': 1,
-    'mp_corr_prior_conc': 1
+    'mp_corr_prior_conc': 1,
+    'exponent_prior_mean': 1.1
 }
 
 if recompile:
-    sm = StanModel(file='corr_rate.stan')
+    sm = StanModel(file='corr_rate.stan', verbose=False)
     with open('corr_rate.pkl', 'wb') as f:
         pickle.dump(sm, f)
 else:
@@ -55,7 +56,11 @@ else:
 
 fit = sm.sampling(data=corr_dat, iter=2000, chains=2)
 estimation = fit.extract(permuted=True)
+cm = estimation['mp_corr_mat']
+print(cm.shape)
 
 # pl.subplot(221)
-# pl.hist(estimation['mp_corr_mat'], bins=40)
-# pl.plot(mp_corr * np.ones((1, 2)), [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
+pl.hist(estimation['mp_corr_mat'][:, 0, 1], bins=40)
+pl.plot(mp_corr * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
+pl.xlim([-1, 1])
+pl.show()
