@@ -5,16 +5,16 @@ from pystan import StanModel
 import matplotlib.pyplot as pl
 
 recompile = False
-rnd.seed(3)
+rnd.seed(6)
 
 n_trial = 1000
-n_bin = 25
+n_bin = 1
 base_rate = 10
 threshold = 1.9
 exponent = 1.1
 
-mu_mp = [-1, -1]
-mp_corr = 0.4
+mu_mp = [1, 1]
+mp_corr = -0.4
 corrmat = np.array([[1, mp_corr], [mp_corr, 1]])
 C_mp = np.diag([2, 2])
 # C_mp[0, 1] = mp_corr
@@ -70,28 +70,34 @@ fit = sm.sampling(data=corr_dat, iter=2000, chains=2)
 estimation = fit.extract(permuted=True)
 cm = estimation['mp_corr_mat']
 
-pl.subplot(321)
+pl.subplot(421)
+pl.scatter(U[:, 0, 0], U[:, 0, 1])
+
+pl.subplot(422)
+pl.scatter(spike_count[:, 0], spike_count[:, 1])
+
+pl.subplot(423)
 pl.hist(estimation['mp_corr_mat'][:, 0, 1], bins=40)
 pl.plot(mp_corr * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
 pl.plot(sc_corr_mat[0, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
 pl.xlim([-1, 1])
 
-pl.subplot(323)
+pl.subplot(425)
 pl.hist(estimation['mp_mean_vec'][:, 0], bins=40)
 pl.plot(mu_mp[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
 pl.plot(sc_mean_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
 
-pl.subplot(324)
+pl.subplot(426)
 pl.hist(estimation['mp_mean_vec'][:, 1], bins=40)
 pl.plot(mu_mp[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
 pl.plot(sc_mean_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
 
-pl.subplot(325)
+pl.subplot(427)
 pl.hist(estimation['mp_var_vec'][:, 0], bins=40)
 pl.plot(C_mp[0, 0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
 # pl.plot(sc_var_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
 
-pl.subplot(326)
+pl.subplot(428)
 pl.hist(estimation['mp_var_vec'][:, 1], bins=40)
 pl.plot(C_mp[1, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
 # pl.plot(sc_var_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
