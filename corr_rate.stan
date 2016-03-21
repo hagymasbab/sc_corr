@@ -17,9 +17,9 @@ data {
   vector[n_unit] sc_mean_vec;
   vector<lower=0>[n_unit] sc_var_vec;
 
-  # real base_rate_prior_mean;
+  real base_rate_prior_mean;
   # real base_rate_prior_var;
-  # real threshold_prior_mean;
+  real threshold_prior_mean;
   # real threshold_prior_var;
   real exponent_prior_mean;
   # real exponent_prior_var;
@@ -29,12 +29,23 @@ data {
   real mp_var_prior_shape;
   real mp_var_prior_scale;
   real mp_corr_prior_conc;
+
+  # MC
+  int n_samples;
+  vector[n_unit] stdnorm_samples[n_samples];
 }
 
 transformed data {
-  # correlations shifted to [0,1]
+  # int n_samples;
   matrix[n_unit,n_unit] sc_shifted_corr_vals;
-  sc_shifted_corr_vals <- (sc_corr_mat + 1) ./ 2;
+
+  # number of sigma points or samples
+  # UT
+  # n_samples <- n_unit * 2 + 1;  
+
+  # correlations shifted to [0,1]
+  sc_shifted_corr_vals <- (sc_corr_mat + 1) ./ 2.0;
+
 }
 
 parameters {
@@ -53,10 +64,11 @@ model {
   real exponent;
   
   matrix[n_unit,n_unit] mp_cov;
+  matrix[n_unit,n_unit] mp_cov_cholesky;
 
   matrix[n_unit,n_unit] mp_cov_sqrt;
-  vector[n_unit] sigma_points[n_unit * 2 + 1];
-  vector[n_unit] tr_sigma_points[n_unit * 2 + 1];
+  vector[n_unit] sigma_points[n_samples];
+  vector[n_unit] tr_sigma_points[n_samples];
 
   vector[n_unit] rate_mean;
   matrix[n_unit,n_unit] rate_cov;
@@ -85,25 +97,36 @@ model {
   # exponent ~ normal(exponent_prior_mean, exponent_prior_var);
 
   # quick and dirty rate parameters
-  base_rate <- 10;
-  threshold <- 1.9;
+  base_rate <- base_rate_prior_mean;
+  threshold <- threshold_prior_mean;
   exponent <- exponent_prior_mean;
   
   # construct MP covariance
   mp_cov <- quad_form_diag(multiply_lower_tri_self_transpose(mp_corr_chol), sqrt_vec(mp_var_vec));
 
   # construct sigma points
-  mp_cov_sqrt <- quad_form_sym(diag_matrix(sqrt_vec(eigenvalues_sym(mp_cov))), eigenvectors_sym(mp_cov)');
-  sigma_points[1] <- mp_mean_vec;
-  for (i in 1:2*n_unit) {
-    if (i <= n_unit) 
-      sigma_points[i+1] <- sqrt(2) * row(mp_cov_sqrt,i)';
-    else
-      sigma_points[i+1] <- -sqrt(2) * row(mp_cov_sqrt,i-n_unit)';
+  # UT
+  # mp_cov_sqrt <- quad_form_sym(diag_matrix(sqrt_vec(eigenvalues_sym(mp_cov))), eigenvectors_sym(mp_cov)'); 
+  # MC
+  mp_cov_cholesky <- cholesky_decompose(mp_cov);
+  for (i in 1:n_samples) {
+    # UT
+    # if (i==1)
+    #   sigma_points[1] <- mp_mean_vec;
+    # else {
+    #   if (i <= n_unit+1) 
+    #     sigma_points[i] <- sqrt(2) * row(mp_cov_sqrt,i)';
+    #   else
+    #     sigma_points[i] <- -sqrt(2) * row(mp_cov_sqrt,i-n_unit)';
+    # }
+
+    # MC
+    sigma_points[i] <- mp_mean_vec + mp_cov_cholesky * stdnorm_samples[i];
+    
   }
 
   # push the sigma points through the nonlinearity
-  for (i in 1:2*n_unit+1) {
+  for (i in 1:n_samples) {
     tr_sigma_points[i] <- (sigma_points[i] - threshold);
     for (j in 1:n_unit){
       tr_sigma_points[i,j] <- if_else(tr_sigma_points[i,j] > 0, tr_sigma_points[i,j], 0);
@@ -117,16 +140,16 @@ model {
 
   # calculate rate moments and multiply with number of bins
   rate_mean <- tr_sigma_points[1];
-  for (i in 2:2*n_unit+1) {
+  for (i in 2:n_samples) {
     rate_mean <- rate_mean + tr_sigma_points[i];
   }
-  rate_mean <- rate_mean ./ (2.0*n_unit+1.0);
+  rate_mean <- rate_mean ./ n_samples;
 
   rate_cov <- diag_matrix(rep_vector(0.0,n_unit));
-  for (i in 2:2*n_unit+1) {
+  for (i in 1:n_samples) {
       rate_cov <- rate_cov + (tr_sigma_points[i] - rate_mean) * (tr_sigma_points[i] - rate_mean)';
   }
-  rate_cov <- rate_cov ./ (2.0*n_unit+1.0); # covariance is normalised by N here
+  rate_cov <- rate_cov ./ n_samples; # covariance is normalised by N here
 
   # TEST 
   # rate_mean <- mp_mean_vec;
@@ -141,7 +164,7 @@ model {
   for (i in 1:n_unit){
     sc_mean_sampling_std <- sqrt(sc_var_true[i]) / sqrt(n_trial);
     sc_var_sampling_shape <- (n_trial - 1) / 2.0;
-    sc_var_sampling_rate <- n_trial / (2.0 * sqrt(sc_var_true[i]));
+    sc_var_sampling_rate <- n_trial / (2.0 * sc_var_true[i]);
     sc_mean_vec[i] ~ normal(sc_mean_true[i], sc_mean_sampling_std);
     sc_var_vec[i] ~ gamma(sc_var_sampling_shape, sc_var_sampling_rate);
     for (j in i+1:n_unit){

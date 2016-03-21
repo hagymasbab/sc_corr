@@ -57,8 +57,10 @@ pdf = zeros((stepnum, 1))
 bpdf = zeros((stepnum, 1))
 x = zeros((stepnum, 1))
 
-lsc = loadmat('/Users/karaj/csnl/majom/data/SC_nat_atoc100a01_bin10.mat')
-sc = np.sum(lsc['spikeCount'][0:2, :, 1:51], axis=2)
+# lsc = loadmat('/Users/karaj/csnl/majom/data/SC_nat_atoc100a01_bin10.mat')
+# lsc = loadmat('/home/banmi/csnl/majom/data/SC_nat_atoc100a01_bin10.mat')
+lsc = loadmat('../majom/data/SC_nat_atoc100a01_bin10.mat')
+sc = np.sum(lsc['spikeCount'][5:7, :, 1:51], axis=2)
 trueR_N = corrcoef(sc)[0, 1]
 
 sampleSizes = [20, 50, 100]

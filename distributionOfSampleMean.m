@@ -1,7 +1,7 @@
 function distributionOfSampleMean(nSamp,shape,scale)
     close all
 
-    lsc = load('/Users/karaj/csnl/majom/data/SC_nat_atoc100a01_bin10.mat');
+    lsc = load('../majom/data/SC_nat_atoc100a01_bin10.mat');
     spikeCount = squeeze(sum(lsc.spikeCount(1,:,1:50),3))';
     N = length(spikeCount);
     
@@ -40,11 +40,12 @@ function distributionOfSampleMean(nSamp,shape,scale)
         hold on
         limits = xlim();
         x = linspace(limits(1),limits(2),100);
-        pdf = zeros(size(x));
+        pdf = zeros(size(x));        
         for j = 1:length(x)
             pdf(j) = normpdf(x(j),trueMean,trueSD/sqrt(sampleSize));
         end
-        plot(x,pdf,'LineWidth',3)
+        plot(x,pdf,'LineWidth',3)            
+        plot(trueMean * ones(2,1), ylim(), 'k', 'LineWidth', 3);
         if i==1
             title(sprintf('Sample means from %d samples',nSamp),'FontSize',16)
         end
@@ -56,10 +57,14 @@ function distributionOfSampleMean(nSamp,shape,scale)
         limits = xlim();
         x = linspace(limits(1),limits(2),100);
         pdf = zeros(size(x));
+        gpdf = zeros(size(x));
         for j = 1:length(x)
             pdf(j) = pearsonType3(x(j),sampleSize,trueVar);
+            gpdf(j) = gampdf(x(j), (sampleSize-1)/2, 2*trueVar/sampleSize);
         end
         plot(x,pdf,'LineWidth',3)
+        plot(x,gpdf,'y','LineWidth',3)
+        plot(trueVar * ones(2,1), ylim(), 'k', 'LineWidth', 3);
         if i==1
             title(sprintf('Sample variances from %d samples',nSamp),'FontSize',16)
         end
