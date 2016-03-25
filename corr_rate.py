@@ -9,17 +9,18 @@ recompile = False
 n_samp_gen = 1000
 n_samp_est = 200
 
-n_trial = 100
-n_bin = 20
+n_trial = 1000
+n_bin = 1
 n_unit = 3
 base_rate = 10
 threshold = 1.9
 exponent = 1.1
 
 n_pairs = n_unit * (n_unit - 1) / 2
-mu_mp = 3 * np.ones(n_unit)
+mu_mp = 1 * np.ones(n_unit)
 var_mp = 2 * np.ones(n_unit)
-mp_corrs = [0.8, -0.8, -0.8, 0.8, -0.8, 0.8]
+# mp_corrs = [0.8, -0.8, -0.8, 0.8, -0.8, 0.8]
+mp_corrs = [0.4, -0.1, -0.5]
 corrmat = np.identity(n_unit)
 act_row = 0
 act_col = 1
@@ -66,7 +67,7 @@ corr_dat = {
     'mp_mean_prior_var': 1,
     'mp_var_prior_shape': 1,
     'mp_var_prior_scale': 1,
-    'mp_corr_prior_conc': 1,
+    'mp_corr_prior_conc': 2,
     'exponent_prior_mean': exponent,
     'base_rate_prior_mean': base_rate,
     'threshold_prior_mean': threshold,
