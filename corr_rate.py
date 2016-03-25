@@ -5,16 +5,16 @@ from pystan import StanModel
 import matplotlib.pyplot as pl
 
 recompile = False
-rnd.seed(6)
+rnd.seed(11)
 
-n_trial = 1000
+n_trial = 100
 n_bin = 1
 base_rate = 10
 threshold = 1.9
 exponent = 1.1
 
-mu_mp = [1, 1]
-mp_corr = -0.4
+mu_mp = [2, 2]
+mp_corr = 0.4
 corrmat = np.array([[1, mp_corr], [mp_corr, 1]])
 C_mp = np.diag([2, 2])
 # C_mp[0, 1] = mp_corr
@@ -95,11 +95,11 @@ pl.plot(sc_mean_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='
 pl.subplot(427)
 pl.hist(estimation['mp_var_vec'][:, 0], bins=40)
 pl.plot(C_mp[0, 0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
-# pl.plot(sc_var_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
+pl.plot(sc_var_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
 
 pl.subplot(428)
 pl.hist(estimation['mp_var_vec'][:, 1], bins=40)
 pl.plot(C_mp[1, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
-# pl.plot(sc_var_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
+pl.plot(sc_var_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
 
 pl.show()
