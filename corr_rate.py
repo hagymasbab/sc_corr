@@ -5,35 +5,39 @@ from pystan import StanModel
 import matplotlib.pyplot as pl
 
 recompile = False
-rnd.seed(11)
+# rnd.seed(15)
+n_samp_gen = 1000
 
 n_trial = 100
-n_bin = 1
+n_bin = 20
 base_rate = 10
 threshold = 1.9
 exponent = 1.1
 
-mu_mp = [2, 2]
+mu_mp = [1, 1]
 mp_corr = 0.4
 corrmat = np.array([[1, mp_corr], [mp_corr, 1]])
 C_mp = np.diag([2, 2])
 # C_mp[0, 1] = mp_corr
 # C_mp[1, 0] = C_mp[0, 1]
 C_mp = np.sqrt(C_mp).dot(corrmat.dot(np.sqrt(C_mp)))
-U = rnd.multivariate_normal(mu_mp, C_mp, (n_trial, n_bin))
-rate = np.zeros((n_trial, n_bin, 2))
-for t in range(n_trial):
+U = rnd.multivariate_normal(mu_mp, C_mp, (n_samp_gen, n_bin))
+rate = np.zeros((n_samp_gen, n_bin, 2))
+for t in range(n_samp_gen):
     for b in range(n_bin):
         for c in range(2):
             if U[t, b, c] > threshold:
                 rate[t, b, c] = base_rate * (U[t, b, c] - threshold) ** exponent
-spike_count = np.floor(np.sum(rate, axis=1))
-sc_mean_vec = np.mean(spike_count, axis=0)
-sc_var_vec = np.var(spike_count, axis=0)
-sc_corr_mat = np.corrcoef(spike_count.T)
-print(sc_mean_vec)
-print(sc_var_vec)
-print(sc_corr_mat)
+
+spike_count = np.floor(np.sum(rate, axis=1))  # n_samp_gen x n_unit
+sc_true_mean_vec = np.mean(spike_count, axis=0)
+sc_true_var_vec = np.var(spike_count, axis=0)
+sc_true_corr_mat = np.corrcoef(spike_count.T)
+
+observed_spike_count = spike_count[0:n_trial, :]
+sc_mean_vec = np.mean(observed_spike_count, axis=0)
+sc_var_vec = np.var(observed_spike_count, axis=0)
+sc_corr_mat = np.corrcoef(observed_spike_count.T)
 
 n_samples = 100
 stdnorm_samples = rnd.normal(size=(n_samples, len(mu_mp)))
@@ -70,36 +74,50 @@ fit = sm.sampling(data=corr_dat, iter=2000, chains=2)
 estimation = fit.extract(permuted=True)
 cm = estimation['mp_corr_mat']
 
+
+mp_col = 'r'
+sc_true_col = 'y'
+sc_obs_col = 'g'
+
 pl.subplot(421)
 pl.scatter(U[:, 0, 0], U[:, 0, 1])
 
 pl.subplot(422)
-pl.scatter(spike_count[:, 0], spike_count[:, 1])
+pl.scatter(observed_spike_count[:, 0], observed_spike_count[:, 1])
 
 pl.subplot(423)
 pl.hist(estimation['mp_corr_mat'][:, 0, 1], bins=40)
-pl.plot(mp_corr * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
-pl.plot(sc_corr_mat[0, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
+pl.plot(mp_corr * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+pl.plot(sc_true_corr_mat[0, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
+pl.plot(sc_corr_mat[0, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
 pl.xlim([-1, 1])
 
 pl.subplot(425)
 pl.hist(estimation['mp_mean_vec'][:, 0], bins=40)
-pl.plot(mu_mp[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
-pl.plot(sc_mean_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
+pl.plot(mu_mp[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+if n_bin < 5:
+    pl.plot(sc_true_mean_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
+    pl.plot(sc_mean_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
 
 pl.subplot(426)
 pl.hist(estimation['mp_mean_vec'][:, 1], bins=40)
-pl.plot(mu_mp[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
-pl.plot(sc_mean_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
+pl.plot(mu_mp[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+if n_bin < 5:
+    pl.plot(sc_true_mean_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
+    pl.plot(sc_mean_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
 
 pl.subplot(427)
 pl.hist(estimation['mp_var_vec'][:, 0], bins=40)
-pl.plot(C_mp[0, 0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
-pl.plot(sc_var_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
+pl.plot(C_mp[0, 0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+if n_bin < 5:
+    pl.plot(sc_true_var_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
+    pl.plot(sc_var_vec[0] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
 
 pl.subplot(428)
 pl.hist(estimation['mp_var_vec'][:, 1], bins=40)
-pl.plot(C_mp[1, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='r', linestyle='-', linewidth=2)
-pl.plot(sc_var_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color='g', linestyle='-', linewidth=2)
+pl.plot(C_mp[1, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+if n_bin < 5:
+    pl.plot(sc_true_var_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
+    pl.plot(sc_var_vec[1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
 
 pl.show()

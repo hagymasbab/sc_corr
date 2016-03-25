@@ -73,6 +73,9 @@ model {
   vector[n_unit] rate_mean;
   matrix[n_unit,n_unit] rate_cov;
 
+  vector[n_unit] summed_rate_mean;
+  matrix[n_unit,n_unit] summed_rate_cov;
+
   vector[n_unit] sc_mean_true;
   vector[n_unit] sc_var_true;
   matrix[n_unit,n_unit] sc_corr_true;
@@ -138,7 +141,7 @@ model {
   # TEST
   # tr_sigma_points <- sigma_points;
 
-  # calculate rate moments and multiply with number of bins
+  # calculate rate moments
   rate_mean <- tr_sigma_points[1];
   for (i in 2:n_samples) {
     rate_mean <- rate_mean + tr_sigma_points[i];
@@ -149,16 +152,16 @@ model {
   for (i in 1:n_samples) {
       rate_cov <- rate_cov + (tr_sigma_points[i] - rate_mean) * (tr_sigma_points[i] - rate_mean)';
   }
-  rate_cov <- rate_cov ./ n_samples; # covariance is normalised by N here
+  rate_cov <- rate_cov ./ (n_samples - 1.0); # in UT covariance shoud be normalised by N here
 
-  # TEST 
-  # rate_mean <- mp_mean_vec;
-  # rate_cov <- mp_cov;
+  # calculate summed rate moments by multiplying with number of bins
+  summed_rate_mean <- n_bin * rate_mean;
+  summed_rate_cov <- n_bin * rate_cov;
 
   # calculate mean, variance and correlation of samples
-  sc_mean_true <- rate_mean;
-  sc_var_true <- diagonal(rate_cov);
-  sc_corr_true <- rate_cov ./ prod(sqrt_vec(sc_var_true));
+  sc_mean_true <- summed_rate_mean;
+  sc_var_true <- diagonal(summed_rate_cov);
+  sc_corr_true <- summed_rate_cov ./ prod(sqrt_vec(sc_var_true));
 
   # sample the observations from the statistics sampling distributions
   for (i in 1:n_unit){
