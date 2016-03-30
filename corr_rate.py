@@ -3,6 +3,7 @@ import numpy as np
 import numpy.random as rnd
 from pystan import StanModel
 import matplotlib.pyplot as pl
+from scipy.io import savemat
 
 recompile = False
 # rnd.seed(15)
@@ -10,7 +11,7 @@ n_samp_gen = 1000
 n_samp_est = 200
 
 n_trial = 100
-n_bin = 1
+n_bin = 10
 n_unit = 3
 base_rate = 10
 threshold = 1.9
@@ -19,8 +20,8 @@ exponent = 1.1
 n_pairs = n_unit * (n_unit - 1) / 2
 mu_mp = 3 * np.ones(n_unit)
 var_mp = 2 * np.ones(n_unit)
-mp_corrs = [0.3, -0.2, -0.2, 0.3, -0.2, 0.2]
-# mp_corrs = [0.4, -0.1, -0.5]
+# mp_corrs = [0.3, -0.2, -0.2, 0.3, -0.2, 0.2]
+mp_corrs = [0.4, -0.9, -0.2]
 corrmat = np.identity(n_unit)
 act_row = 0
 act_col = 1
@@ -64,10 +65,10 @@ corr_dat = {
     'sc_mean_vec': sc_mean_vec,
     'sc_var_vec': sc_var_vec,
     'mp_mean_prior_mean': 1,
-    'mp_mean_prior_var': 1,
-    'mp_var_prior_shape': 1,
-    'mp_var_prior_scale': 1,
-    'mp_corr_prior_conc': 2,
+    'mp_mean_prior_var': 2,
+    'mp_var_prior_shape': 3,
+    'mp_var_prior_scale': 4,
+    'mp_corr_prior_conc': 3,
     'exponent_prior_mean': exponent,
     'base_rate_prior_mean': base_rate,
     'threshold_prior_mean': threshold,
@@ -82,10 +83,11 @@ if recompile:
 else:
     sm = pickle.load(open('corr_rate.pkl', 'rb'))
 
-fit = sm.sampling(data=corr_dat, iter=4000, chains=3)
+fit = sm.sampling(data=corr_dat, iter=2000, chains=3)
 estimation = fit.extract(permuted=True)
 cm = estimation['mp_corr_mat']
 pickle.dump(cm, open('corr_mat_samples.pkl', 'wb'))
+savemat('corr_mat_samples.mat', {'cm': cm})
 
 
 mp_col = 'r'
