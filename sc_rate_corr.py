@@ -8,7 +8,7 @@ n_samp_est = 200
 n_iter = 2000
 n_chains = 2
 
-n_unit = 3
+n_unit = 2
 n_pairs = n_unit * (n_unit - 1) / 2
 spont_start_bin = 0
 evoked_start_bin = 70

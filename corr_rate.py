@@ -9,7 +9,7 @@ recompile = False
 n_samp_gen = 1000
 n_samp_est = 200
 
-n_trial = 1000
+n_trial = 100
 n_bin = 1
 n_unit = 3
 base_rate = 10
@@ -17,10 +17,10 @@ threshold = 1.9
 exponent = 1.1
 
 n_pairs = n_unit * (n_unit - 1) / 2
-mu_mp = 1 * np.ones(n_unit)
+mu_mp = 3 * np.ones(n_unit)
 var_mp = 2 * np.ones(n_unit)
-# mp_corrs = [0.8, -0.8, -0.8, 0.8, -0.8, 0.8]
-mp_corrs = [0.4, -0.1, -0.5]
+mp_corrs = [0.3, -0.2, -0.2, 0.3, -0.2, 0.2]
+# mp_corrs = [0.4, -0.1, -0.5]
 corrmat = np.identity(n_unit)
 act_row = 0
 act_col = 1
@@ -82,9 +82,10 @@ if recompile:
 else:
     sm = pickle.load(open('corr_rate.pkl', 'rb'))
 
-fit = sm.sampling(data=corr_dat, iter=2000, chains=2)
+fit = sm.sampling(data=corr_dat, iter=4000, chains=3)
 estimation = fit.extract(permuted=True)
 cm = estimation['mp_corr_mat']
+pickle.dump(cm, open('corr_mat_samples.pkl', 'wb'))
 
 
 mp_col = 'r'
@@ -136,9 +137,9 @@ for i in range(n_unit):
     pl.subplot(num_row, num_col, 4 * num_col + i + 1)
     pl.hist(estimation['mp_var_vec'][:, i], bins=40)
     pl.plot(var_mp[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
-    if n_bin < 5:
-        pl.plot(sc_true_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
-        pl.plot(sc_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+    # if n_bin < 5:
+        # pl.plot(sc_true_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
+        # pl.plot(sc_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
     if i == 0:
         pl.ylabel('MP var')
 
