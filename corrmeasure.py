@@ -31,7 +31,7 @@ class correlationMeasurementModel:
         sc_mean = np.mean(spike_count, axis=0)
         sc_var = np.var(spike_count, axis=0)
         sc_corr = np.corrcoef(spike_count.T)
-        return (sc_corr, sc_mean, sc_var)
+        return sc_corr, sc_mean, sc_var
 
     def infer(self, sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_est, n_iter, n_chains):
         n_unit = len(sc_mean)
@@ -56,6 +56,6 @@ class correlationMeasurementModel:
             'stdnorm_samples': stdnorm_samples
         }
 
-        fit = self.sm.sampling(data=corr_dat, iter=n_iter, chains=n_chains)
+        fit = self.sm.sampling(data=corr_dat, iter=n_iter, chains=n_chains, refresh=0)
         estimation = fit.extract(permuted=True)
-        return (estimation['mp_corr_mat'], estimation['mp_mean_vec'], estimation['mp_var_vec'])
+        return estimation['mp_corr_mat'], estimation['mp_mean_vec'], estimation['mp_var_vec']
