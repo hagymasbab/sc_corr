@@ -12,7 +12,7 @@ n_samp_est = 200
 
 n_trial = 100
 n_bin = 10
-n_unit = 3
+n_unit = 2
 base_rate = 10
 threshold = 1.9
 exponent = 1.1
@@ -21,7 +21,7 @@ n_pairs = n_unit * (n_unit - 1) / 2
 mu_mp = 3 * np.ones(n_unit)
 var_mp = 2 * np.ones(n_unit)
 # mp_corrs = [0.3, -0.2, -0.2, 0.3, -0.2, 0.2]
-mp_corrs = [0.4, -0.9, -0.2]
+mp_corrs = [-0.8, -0.9, -0.2]
 corrmat = np.identity(n_unit)
 act_row = 0
 act_col = 1
