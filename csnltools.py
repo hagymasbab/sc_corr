@@ -8,7 +8,7 @@ def histogramMode(data, resolution):
     return (binEdges[maxIdx] + binEdges[maxIdx+1]) / 2
 
 
-def heatmapPlot(ax, data, xtics, ytics):
+def heatmapPlot(ax, data, xtics, ytics, cbarlabel):
     heatmap = ax.pcolor(data, vmin=-1, vmax=1)
     # put the major ticks at the middle of each cell
     ax.set_xticks(np.arange(data.shape[0])+0.5, minor=False)
@@ -17,4 +17,5 @@ def heatmapPlot(ax, data, xtics, ytics):
     ax.set_xticklabels([str(x) for x in xtics], minor=False)
     ax.set_yticklabels([str(y) for y in ytics], minor=False)
 
-    plt.colorbar(heatmap)
+    cbar = plt.colorbar(heatmap)
+    cbar.set_label(cbarlabel)

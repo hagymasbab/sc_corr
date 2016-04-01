@@ -14,7 +14,7 @@ n_samp = 500
 
 n_corrs = 5
 n_means = 2
-n_reest = 3
+n_reest = 10
 
 mean_vals = np.linspace(1, 3, n_means)
 corr_vals = np.linspace(-0.9, 0.9, n_corrs)
@@ -29,6 +29,9 @@ if recalc:
         mu_mp = mean_vals[m] * np.ones(n_unit)
         for c1 in range(n_corrs):
             for c2 in range(n_corrs):
+                f = open('biastest_progress.txt', 'a')
+                f.write('Mean %d/%d corr1 %d/%d corr2 %d/%d\n' % (n_means, m+1, n_corrs, c1+1, n_corrs, c2+1))
+                f.close()
                 corr_mp = np.identity(n_unit)
                 corr_mp[0, 1] = corr_vals[c1]
                 corr_mp[0, 2] = corr_vals[c2]
@@ -51,5 +54,9 @@ for m in range(n_means):
     for p in range(2):
         ax = plt.subplot(2, n_means, p*n_means+m+1)
         avg_error = np.mean(est_vs_true[m, :, :, :, :], axis=2)
-        heatmapPlot(ax, avg_error[:, :, p], corr_vals, corr_vals)
+        heatmapPlot(ax, avg_error[:, :, p], corr_vals, corr_vals, "average MAP corr of pair 1-%d" % (p+2))
+        plt.xlabel('MP corr, pair 1-2')
+        plt.ylabel('MP corr, pair 1-3')
+        if p == 0:
+            plt.title("MP mean=%.2f" % mean_vals[m])
 plt.show()
