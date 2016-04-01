@@ -56,6 +56,6 @@ class correlationMeasurementModel:
             'stdnorm_samples': stdnorm_samples
         }
 
-        fit = self.sm.sampling(data=corr_dat, iter=n_iter, chains=n_chains, refresh=0)
+        fit = self.sm.sampling(data=corr_dat, iter=n_iter, chains=n_chains)
         estimation = fit.extract(permuted=True)
         return estimation['mp_corr_mat'], estimation['mp_mean_vec'], estimation['mp_var_vec']
