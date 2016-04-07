@@ -1,8 +1,6 @@
 import numpy as np
 import numpy.random as rnd
 import pickle
-import os
-import sys
 
 
 class correlationMeasurementModel:
@@ -18,7 +16,8 @@ class correlationMeasurementModel:
         self.mp_var_prior_scale = 4
         self.mp_corr_prior_conc = 3
 
-    def generate(self, mp_corr, mp_mean, mp_var, n_trial, n_bin):
+    def generate(self, mp_corr, mp_mean, mp_var, n_trial, n_bin, seed):
+        rnd.seed(seed)
         n_unit = len(mp_mean)
         C_mp = np.diag(mp_var)
         C_mp = np.sqrt(C_mp).dot(mp_corr.dot(np.sqrt(C_mp)))
@@ -35,7 +34,7 @@ class correlationMeasurementModel:
         sc_corr = np.corrcoef(spike_count.T)
         return sc_corr, sc_mean, sc_var
 
-    def infer(self, sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_est, n_iter, n_chains):
+    def infer(self, sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_est, n_iter, n_chains, seed):
         n_unit = len(sc_mean)
         stdnorm_samples = rnd.normal(size=(n_samp_est, n_unit))
 
@@ -57,6 +56,6 @@ class correlationMeasurementModel:
             'n_samples': n_samp_est,
             'stdnorm_samples': stdnorm_samples
         }
-        fit = self.sm.sampling(data=corr_dat, iter=n_iter, chains=n_chains)
+        fit = self.sm.sampling(data=corr_dat, iter=n_iter, chains=n_chains, seed=seed)
         estimation = fit.extract(permuted=True)
         return estimation['mp_corr_mat'], estimation['mp_mean_vec'], estimation['mp_var_vec']
