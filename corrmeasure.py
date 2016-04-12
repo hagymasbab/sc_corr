@@ -16,8 +16,9 @@ class correlationMeasurementModel:
         self.mp_var_prior_scale = 4
         self.mp_corr_prior_conc = 3
 
-    def generate(self, mp_corr, mp_mean, mp_var, n_trial, n_bin, seed):
-        rnd.seed(seed)
+    def generate(self, mp_corr, mp_mean, mp_var, n_trial, n_bin, seed=None):
+        if seed is not None:
+            rnd.seed(seed)
         n_unit = len(mp_mean)
         C_mp = np.diag(mp_var)
         C_mp = np.sqrt(C_mp).dot(mp_corr.dot(np.sqrt(C_mp)))
