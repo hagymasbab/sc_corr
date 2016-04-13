@@ -14,7 +14,11 @@ n_pair = n_unit * (n_unit - 1) / 2
 n_bin = 1
 n_trial = 100
 n_samp = 1000
+n_chain = 2
+n_step_per_chain = np.floor(2 * n_samp / n_chain)
+n_samp = n_step_per_chain * n_chain / 2
 n_noiselessTrial = 10000
+n_samp_gen = 500
 
 n_corrs = 2
 n_means = 3
@@ -46,7 +50,7 @@ if recalc:
                 sc_corr, sc_mean, sc_var = cmm.generate(corr_mp, mu_mp, var_mp, n_trial, n_bin, seed)
                 rnd.seed()
                 seed = rnd.randint(10000)
-                mps_corr, mps_mean, mps_var = cmm.infer(sc_corr, sc_mean, sc_var, n_trial, n_bin, 100, n_samp, 2, seed)
+                mps_corr, mps_mean, mps_var = cmm.infer(sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_gen, n_step_per_chain, n_chain, seed)
                 samples[m, c, i, :] = mps_corr[:, 0, 1]
                 MAP_corr = histogramMode(mps_corr[:, 0, 1], 20)
                 est_vs_true[m, c, i, :] = [corr_vals[c], MAP_corr, sc_corr[0, 1], sc_corr_noiseless[0, 1]]
