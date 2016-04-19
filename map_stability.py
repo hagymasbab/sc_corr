@@ -19,9 +19,9 @@ var_mp = 1 * np.ones(n_unit)
 true_corr = 0.5
 corr_mp = np.array([[1, true_corr], [true_corr, 1]])
 
-sampNums = [100, 1000]
-chainNums = [1, 2]
-genSampNums = [100, 200]
+sampNums = [500, 5000]
+chainNums = [1, 6]
+genSampNums = [100, 500]
 
 samples = np.empty((len(sampNums), len(chainNums), len(genSampNums), n_reest, np.max(sampNums)))
 samples[:] = np.NAN
@@ -53,6 +53,12 @@ map_variances = np.zeros((len(sampNums), len(chainNums), len(genSampNums)))
 for sn in range(len(sampNums)):
     for cn in range(len(chainNums)):
         pl.subplot(len(sampNums), len(chainNums), sn * len(chainNums) + cn + 1)
+        if cn == 0:
+            pl.ylabel("Sample num %d" % sampNums[sn])
+        if sn == 0:
+            pl.title("Chain num %d" % chainNums[cn])
+        elif sn == len(sampNums) - 1:
+            pl.xlabel("Transform samps")
         pl.ylim([-1, 1])
         for gsn in range(len(genSampNums)):
             for re in range(n_reest):
@@ -60,5 +66,6 @@ for sn in range(len(sampNums)):
                 actsamp = samples[sn, cn, gsn, re, :]
                 actsamp = actsamp[actsamp is not np.NAN]
                 maps[sn, cn, gsn, re] = histogramMode(actsamp, 20)
-            pl.scatter((gsn+1)*np.ones(n_reest), maps[sn, cn, gsn, :])
+            pl.scatter(genSampNums[gsn]*np.ones(n_reest), maps[sn, cn, gsn, :])
+        pl.plot(pl.xlim(), true_corr * np.ones(2), color="black", linestyle='--', linewidth=1)
 pl.show()
