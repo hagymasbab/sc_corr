@@ -13,12 +13,12 @@ n_unit = 2
 n_pair = n_unit * (n_unit - 1) / 2
 n_bin = 1
 n_trial = 100
-n_samp = 1000
-n_chain = 2
+n_samp = 6000
+n_chain = 6
 n_step_per_chain = np.floor(2 * n_samp / n_chain)
 n_samp = n_step_per_chain * n_chain / 2
 n_noiselessTrial = 10000
-n_samp_gen = 500
+n_samp_gen = 200
 
 n_corrs = 2
 n_means = 3
