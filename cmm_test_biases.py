@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from csnltools import histogramMode
 
 
-recalc = True
+recalc = False
 plotContrast = False
 
 n_unit = 2
@@ -112,6 +112,7 @@ else:
         plt.subplot(1, n_corrs, c+1)
         true_mean = np.zeros(n_means * n_reest)
         all_map = np.zeros(n_means * n_reest)
+        all_mean = np.zeros(n_means * n_reest)
         low_std = np.zeros(n_means * n_reest)
         high_std = np.zeros(n_means * n_reest)
         means_for_noiseless = np.zeros(n_means * 2)
@@ -129,11 +130,12 @@ else:
                 true_mean[m * n_reest + r] = mean_vals[m] + (r - central_reest) * 0.05
                 reest_mean[r] = true_mean[m * n_reest + r]
                 act_mean = np.mean(samples[m, c, r_idx, :])
+                act_map = histogramMode(samples[m, c, r_idx, :], 30)
                 act_std = np.std(samples[m, c, r_idx, :])
-                act_map = est_vs_true[m, c, r_idx, 1]
                 low_std[m * n_reest + r] = act_map - (act_mean - act_std)
                 high_std[m * n_reest + r] = (act_mean + act_std) - act_map
                 all_map[m * n_reest + r] = act_map
+                all_mean[m * n_reest + r] = act_mean
             srtd_obs = np.sort(reest_obs)
             invcrv = - (srtd_obs - corr_vals[c]) + corr_vals[c]
             plt.plot(reest_mean, srtd_obs, color='red', linewidth=2)
@@ -141,6 +143,7 @@ else:
 
         plt.plot(means_for_noiseless, noiseless_corr, color='green', linewidth=2)
         plt.errorbar(true_mean, all_map, yerr=[low_std, high_std], fmt='o', linewidth=1.5, markersize=7)
+        plt.scatter(true_mean, all_mean, color='black', s=50)
         plt.plot(plt.xlim(), corr_vals[c] * np.ones(2), color="black", linestyle='--', linewidth=1)
         plt.title("MP corr=%.2f" % corr_vals[c])
         if m == 0:
