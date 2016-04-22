@@ -19,9 +19,9 @@ var_mp = 1 * np.ones(n_unit)
 true_corr = 0.5
 corr_mp = np.array([[1, true_corr], [true_corr, 1]])
 
-sampNums = [1200, 2400, 6000]
-chainNums = [1, 6]
-genSampNums = [100, 200, 500]
+sampNums = [100, 1000]
+chainNums = [1, 2]
+genSampNums = [100]
 
 samples = np.empty((len(sampNums), len(chainNums), len(genSampNums), n_reest, np.max(sampNums)))
 samples[:] = np.NAN
@@ -41,7 +41,7 @@ if recalc:
             for gsn in range(len(genSampNums)):
                 n_samp_gen = genSampNums[gsn]
                 for re in range(n_reest):
-                    mps_corr, mps_mean, mps_var = cmm.infer(sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_gen, n_step_per_chain, n_chain)
+                    mps_corr, mps_mean, mps_var = cmm.infer(sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_gen, n_step_per_chain, n_chain, init='random')
                     samples[sn, cn, gsn, re, 0:n_samp] = mps_corr[:, 0, 1]
 
     pickle.dump((samples, obs_corr), open('mapstab.pkl', 'wb'))
