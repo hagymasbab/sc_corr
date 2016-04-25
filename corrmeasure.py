@@ -37,7 +37,12 @@ class correlationMeasurementModel:
 
     def infer(self, sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_est, n_iter, n_chains, seed=None, init='random'):
         n_unit = len(sc_mean)
-        stdnorm_samples = rnd.normal(size=(n_samp_est, n_unit))
+
+        if hasattr(n_samp_est, "__iter__"):
+            stdnorm_samples = n_samp_est
+            n_samp_est = len(stdnorm_samples)
+        else:
+            stdnorm_samples = rnd.normal(size=(n_samp_est, n_unit))
 
         corr_dat = {
             'n_trial': n_trial,
