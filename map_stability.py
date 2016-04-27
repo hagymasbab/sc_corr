@@ -16,14 +16,15 @@ n_trial = 100
 
 mu_mp = 2 * np.ones(n_unit)
 var_mp = 1 * np.ones(n_unit)
-true_corr = 0.5
+true_corr = -0.5
 corr_mp = np.array([[1, true_corr], [true_corr, 1]])
 
 samp_init = {'mp_corr_chol': np.linalg.cholesky(corr_mp), 'mp_mean_vec': mu_mp, 'mp_var_vec': var_mp}
 
-sampNums = [100, 1000, 10000]
+sampNums = [5000]
 chainNums = [1]
-genSampNums = [100]
+genSampNums = [200]
+thinning = 1
 
 samples = np.empty((len(sampNums), len(chainNums), len(genSampNums), n_reest, np.max(sampNums)))
 samples[:] = np.NAN
@@ -50,7 +51,7 @@ if recalc:
                 n_samp_gen = genSampNums[gsn]
                 stdnorm_samples = rnd.normal(size=(n_samp_gen, n_unit))
                 for re in range(n_reest):
-                    mps_corr, mps_mean, mps_var = cmm.infer(sc_corr, sc_mean, sc_var, n_trial, n_bin, stdnorm_samples, n_step_per_chain, n_chain, init=initvals)
+                    mps_corr, mps_mean, mps_var = cmm.infer(sc_corr, sc_mean, sc_var, n_trial, n_bin, stdnorm_samples, n_step_per_chain*thinning, n_chain, thin=thinning)
                     # mps_corr, mps_mean, mps_var = cmm.infer(sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_gen, n_step_per_chain, n_chain, init=initvals)
                     samples[sn, cn, gsn, re, 0:n_samp] = mps_corr[:, 0, 1]
 
