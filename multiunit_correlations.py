@@ -27,8 +27,8 @@ def samp_mixture(n_samp, coeffs, means, stds):
     return samps
 
 
-firstMixtureCoeff = [0.5, 0.4, 1]
-mixtureMean = [[0.5, -0.5], [0.5, -0.5], [0.1, 0.1]]
+firstMixtureCoeff = [1, 1, 1]
+mixtureMean = [[0.1, -0.5], [0.1, -0.5], [0.01, 0.1]]
 mixtureStd = [[0.01, 0.01], [0.01, 0.01], [0.001, 0.001]]
 colors = ["red", "green", "blue"]
 
