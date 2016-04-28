@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.stats as st
 
 
 def histogramMode(data, resolution):
@@ -44,3 +45,21 @@ def correlation(x):
             return 0.0
         else:
             return corr
+
+
+def pdf_mean(x, pdf):
+    return np.sum(x * pdf)
+
+
+def pdf_map(x, pdf):
+    return x[np.argmax(pdf)]
+
+
+def pdf_std(x, pdf):
+    mu = pdf_mean(x, pdf)
+    var = np.sum((x - mu) ** 2 * pdf)
+    return np.sqrt(var)
+
+
+def beta_over_correlations(x, shape, rate):
+    return st.beta.pdf((x + 1) / 2, shape, rate) / 2

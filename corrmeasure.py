@@ -1,8 +1,25 @@
 import numpy as np
 import numpy.random as rnd
 import scipy.stats as st
+import scipy.special as fn
 import pickle
 import csnltools as ct
+
+
+def corr_error_pdf(r, trueR, n):
+    num_const = (n - 2) * fn.gamma(n - 1)
+    num_rho = (1 - trueR ** 2) ** ((n - 1) / 2)
+    num_r = (1 - r ** 2) ** ((n - 4) / 2)
+    den_const = np.sqrt(2 * np.pi) * fn.gamma(n - 0.5)
+    den_rhor = (1 - trueR * r) ** (n - 1.5)
+    num_hyp = fn.hyp2f1(0.5, 0.5, (2 * n - 1) / 2, (trueR * r + 1) / 2)
+    return (num_const * num_rho * num_r * num_hyp) / (den_const * den_rhor)
+
+
+def corr_dist_moments(true_corr, n_trial):
+    obs_corr_mean = true_corr - ((1 - true_corr) ** 2 / (2 * (n_trial - 1)))
+    obs_corr_var = (1 + 11 * true_corr ** 2 / (2 * (n_trial - 1))) * ((1 - true_corr ** 2) ** 2) / (n_trial - 1)
+    return obs_corr_mean, obs_corr_var
 
 
 class correlationMeasurementModel:
@@ -24,8 +41,9 @@ class correlationMeasurementModel:
         n_unit = len(mp_mean)
         C_mp = np.diag(mp_var)
         C_mp = np.sqrt(C_mp).dot(mp_corr.dot(np.sqrt(C_mp)))
-        # TODO us this C_mp = ct.covariance_matrix(mp_var, mp_corr)
+        # TODO use this C_mp = ct.covariance_matrix(mp_var, mp_corr)
         U = rnd.multivariate_normal(mp_mean, C_mp, (n_trial, n_bin))
+        # TODO use this self.rate_transform(U)
         rate = np.zeros((n_trial, n_bin, n_unit))
         for t in range(n_trial):
             for b in range(n_bin):
@@ -84,6 +102,8 @@ class correlationMeasurementModel:
         return 1
 
     def rate_transform(self, mp_samples):
+        # TODO do this in matrix form
+        # TODO support ndarrays of more than 2 dimensions
         rate = np.zeros(mp_samples.shape)
         for u in range(mp_samples.shape[0]):
             for s in range(mp_samples.shape[1]):
@@ -95,21 +115,24 @@ class correlationMeasurementModel:
         return rate
 
     def evaluate_pairwise_corr_likelihood(self, n_trial, scc, mpc, mp_means, mp_vars, n_samp):
+        # in a single bin
         mp_covmat = ct.covariance_matrix(mp_vars, np.array([[1, mpc], [mpc, 1]]))
         mp_samples = rnd.multivariate_normal(mp_means, mp_covmat, n_samp)
         rate_samples = self.rate_transform(mp_samples)
         # print rate_samples
         rate_corr = ct.correlation(rate_samples.T)
         # print rate_corr
-        obs_corr_mean = rate_corr - ((1 - rate_corr) ** 2 / (2 * (n_trial - 1)))
-        obs_corr_var = (1 + 11 * rate_corr ** 2 / (2 * (n_trial - 1))) * ((1 - rate_corr ** 2) ** 2) / (n_trial - 1)
+        obs_corr_mean, obs_corr_var = corr_dist_moments(rate_corr, n_trial)
+        if obs_corr_var == 0.0:
+            obs_corr_var = 0.001
         # print obs_corr_mean, obs_corr_var
         beta_shape, beta_rate = ct.beta_params_from_moments((obs_corr_mean + 1) / 2.0, obs_corr_var / 4.0)
         # print beta_shape, beta_rate
-        if beta_shape > 100:
+        # TODO these might be inappropriate
+        if beta_shape > 100 or beta_rate > 100 or beta_shape < 0 or beta_rate < 0:
             return 0
         else:
-            return st.beta.pdf((scc + 1) / 2.0, beta_shape, beta_rate)
+            return st.beta.pdf((scc + 1) / 2.0, beta_shape, beta_rate) / 2.0
 
     def pairwise_corr_numerical_posterior(self, n_trial, sc_corr, n_transform_samples, n_marginal_samples, n_eval_points):
         n_unit = 2
@@ -124,8 +147,12 @@ class correlationMeasurementModel:
             for l in range(n_marginal_samples):
                 act_marginal_likelihood = self.evaluate_pairwise_corr_likelihood(n_trial, sc_corr, act_mpc, mean_samples[:, l], var_samples[:, l], n_transform_samples)
                 # print act_marginal_likelihood
+                if np.isnan(act_marginal_likelihood):
+                    raise ValueError("nan in the likelihood")
                 marginal_likelihood += act_marginal_likelihood
             act_prior = self.evaluate_corr_prior(act_mpc)
             posterior[i] = marginal_likelihood * act_prior
-        # posterior = posterior / np.sum(posterior)
+        # print posterior
+        posterior = posterior / np.sum(posterior)
+        # posterior = posterior / (np.sum(posterior) * (2 / len(eval_points)))
         return posterior
