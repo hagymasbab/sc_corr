@@ -6,9 +6,9 @@ import matplotlib.pyplot as pl
 # from csnltools import histogramMode
 
 
-recalc = True
-n_reest = 30
-n_averaging = 10
+recalc = False
+n_reest = 18
+n_averaging = 6
 
 n_unit = 2
 n_pair = n_unit * (n_unit - 1) / 2
@@ -17,14 +17,14 @@ n_trial = 100
 
 mu_mp = 2 * np.ones(n_unit)
 var_mp = 1 * np.ones(n_unit)
-true_corr = -0.5
+true_corr = 0.5
 corr_mp = np.array([[1, true_corr], [true_corr, 1]])
 
 samp_init = {'mp_corr_chol': np.linalg.cholesky(corr_mp), 'mp_mean_vec': mu_mp, 'mp_var_vec': var_mp}
 
-sampNums = [1000]
-chainNums = [1]
-genSampNums = [200]
+sampNums = [500, 2000]
+chainNums = [5]
+genSampNums = [100, 200, 300]
 thinning = 1
 
 samples = np.empty((len(sampNums), len(chainNums), len(genSampNums), n_reest, np.max(sampNums)))
@@ -64,7 +64,8 @@ else:
 
 
 n_estimates = n_reest / n_averaging
-maps = np.zeros((len(sampNums), len(chainNums), len(genSampNums), n_estimates))
+maps_avg = np.zeros((len(sampNums), len(chainNums), len(genSampNums), n_estimates))
+maps = np.zeros((len(sampNums), len(chainNums), len(genSampNums), n_reest))
 map_variances = np.zeros((len(sampNums), len(chainNums), len(genSampNums)))
 for sn in range(len(sampNums)):
     for cn in range(len(chainNums)):
@@ -77,13 +78,19 @@ for sn in range(len(sampNums)):
             pl.xlabel("Transform samps")
         pl.ylim([-1, 1])
         for gsn in range(len(genSampNums)):
-            for re in range(n_estimates):
-                # TODO handle nans
-                actsamp = samples[sn, cn, gsn, re*n_averaging:(re+1)*n_averaging, :]
+            for re in range(n_reest):
+                actsamp = samples[sn, cn, gsn, re, :]
                 actsamp = actsamp[actsamp is not np.NAN]
                 # maps[sn, cn, gsn, re] = histogramMode(actsamp, 20)
                 maps[sn, cn, gsn, re] = np.mean(actsamp)
-            pl.scatter(genSampNums[gsn]*np.ones(n_reest), maps[sn, cn, gsn, :])
+            for ae in range(n_estimates):
+                actsamp = samples[sn, cn, gsn, ae * n_averaging:(ae + 1) * n_averaging, :]
+                for a in range(n_averaging):
+                    actsamp[a, :] = actsamp[a, actsamp[a, :] is not np.NAN]
+                maps_avg[sn, cn, gsn, ae] = np.mean(np.mean(actsamp, axis=1))
+            pl.scatter(genSampNums[gsn] * np.ones(n_reest), maps[sn, cn, gsn, :])
+            pl.scatter(genSampNums[gsn] * np.ones(n_estimates), maps_avg[sn, cn, gsn, :], color='red')
+            print maps_avg[sn, cn, :, :]
         pl.plot(pl.xlim(), true_corr * np.ones(2), color="black", linestyle='--', linewidth=1)
         pl.plot(pl.xlim(), obs_corr * np.ones(2), color="red", linestyle='-', linewidth=1)
 pl.show()

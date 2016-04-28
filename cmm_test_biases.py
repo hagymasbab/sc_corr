@@ -6,15 +6,15 @@ import matplotlib.pyplot as plt
 from csnltools import histogramMode
 
 
-recalc = False
+recalc = True
 plotContrast = False
 
 n_unit = 2
 n_pair = n_unit * (n_unit - 1) / 2
 n_bin = 1
 n_trial = 100
-n_samp = 6000
-n_chain = 6
+n_samp = 500
+n_chain = 5
 n_step_per_chain = np.floor(2 * n_samp / n_chain)
 n_samp = n_step_per_chain * n_chain / 2
 n_noiselessTrial = 10000
@@ -22,12 +22,12 @@ n_samp_gen = 200
 
 n_corrs = 2
 n_means = 3
-n_reest = 3
+n_reest = 7
 
 mean_vals = np.linspace(1, 3, n_means)
 print(mean_vals)
 
-corr_vals = np.linspace(-0.8, 0.8, n_corrs)
+corr_vals = np.linspace(-0.2, 0.2, n_corrs)
 print(corr_vals)
 
 if recalc:
@@ -46,7 +46,7 @@ if recalc:
             sc_corr_noiseless, temp_mean, temp_var = cmm.generate(corr_mp, mu_mp, var_mp, n_noiselessTrial, n_bin)
 
             for i in range(n_reest):
-                seed = (m+1)*(c+1)*(i+1)
+                seed = (m + 1) * (c + 1) * (i + 1)
                 sc_corr, sc_mean, sc_var = cmm.generate(corr_mp, mu_mp, var_mp, n_trial, n_bin, seed)
                 rnd.seed()
                 seed = rnd.randint(10000)
@@ -65,7 +65,7 @@ else:
 central_reest = np.floor(n_reest / 2)
 if plotContrast:
     for m in range(n_means):
-        plt.subplot(1, n_means, m+1)
+        plt.subplot(1, n_means, m + 1)
         true_corr = est_vs_true[m, :, :, 0]
         for c in range(n_corrs):
             for r in range(n_reest):
@@ -109,7 +109,7 @@ if plotContrast:
             plt.xlabel("true MP corr")
 else:
     for c in range(n_corrs):
-        plt.subplot(1, n_corrs, c+1)
+        plt.subplot(1, n_corrs, c + 1)
         true_mean = np.zeros(n_means * n_reest)
         all_map = np.zeros(n_means * n_reest)
         all_mean = np.zeros(n_means * n_reest)
@@ -118,10 +118,10 @@ else:
         means_for_noiseless = np.zeros(n_means * 2)
         noiseless_corr = np.zeros(n_means * 2)
         for m in range(n_means):
-            means_for_noiseless[m*2] = mean_vals[m] - (central_reest+1) * 0.05
-            means_for_noiseless[m*2+1] = mean_vals[m] + (n_reest - central_reest) * 0.05
-            noiseless_corr[m*2] = est_vs_true[m, c, 1, 3]
-            noiseless_corr[m*2+1] = est_vs_true[m, c, 1, 3]
+            means_for_noiseless[m * 2] = mean_vals[m] - (central_reest + 1) * 0.05
+            means_for_noiseless[m * 2 + 1] = mean_vals[m] + (n_reest - central_reest) * 0.05
+            noiseless_corr[m * 2] = est_vs_true[m, c, 1, 3]
+            noiseless_corr[m * 2 + 1] = est_vs_true[m, c, 1, 3]
             reest_obs = est_vs_true[m, c, :, 2]
             reest_mean = np.zeros(n_reest)
             sortindices = np.argsort(reest_obs)
