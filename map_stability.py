@@ -7,7 +7,8 @@ import matplotlib.pyplot as pl
 
 
 recalc = True
-n_reest = 10
+n_reest = 30
+n_averaging = 10
 
 n_unit = 2
 n_pair = n_unit * (n_unit - 1) / 2
@@ -21,7 +22,7 @@ corr_mp = np.array([[1, true_corr], [true_corr, 1]])
 
 samp_init = {'mp_corr_chol': np.linalg.cholesky(corr_mp), 'mp_mean_vec': mu_mp, 'mp_var_vec': var_mp}
 
-sampNums = [5000]
+sampNums = [1000]
 chainNums = [1]
 genSampNums = [200]
 thinning = 1
@@ -62,7 +63,8 @@ else:
     obs_corr = loaded[1]
 
 
-maps = np.zeros((len(sampNums), len(chainNums), len(genSampNums), n_reest))
+n_estimates = n_reest / n_averaging
+maps = np.zeros((len(sampNums), len(chainNums), len(genSampNums), n_estimates))
 map_variances = np.zeros((len(sampNums), len(chainNums), len(genSampNums)))
 for sn in range(len(sampNums)):
     for cn in range(len(chainNums)):
@@ -75,9 +77,9 @@ for sn in range(len(sampNums)):
             pl.xlabel("Transform samps")
         pl.ylim([-1, 1])
         for gsn in range(len(genSampNums)):
-            for re in range(n_reest):
+            for re in range(n_estimates):
                 # TODO handle nans
-                actsamp = samples[sn, cn, gsn, re, :]
+                actsamp = samples[sn, cn, gsn, re*n_averaging:(re+1)*n_averaging, :]
                 actsamp = actsamp[actsamp is not np.NAN]
                 # maps[sn, cn, gsn, re] = histogramMode(actsamp, 20)
                 maps[sn, cn, gsn, re] = np.mean(actsamp)
