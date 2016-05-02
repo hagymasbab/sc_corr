@@ -26,58 +26,38 @@ class correlationMeasurementModel:
 
     def __init__(self, stanModel):
         self.sm = pickle.load(open(stanModel, 'rb'))
-
         self.threshold = 1.9
         self.base_rate = 10
         self.exponent = 1.1
-
         self.mp_mean_prior_mean = 1
         self.mp_mean_prior_var = 2
         self.mp_var_prior_shape = 3
         self.mp_var_prior_scale = 4
         self.mp_corr_prior_conc = 3
 
-        self.quick_mean = 2
-        self.quick_var = 1
-        self.quick_corr = 0.5
-        self.quick_trialnum = 100
-        self.quick_binnum = 100
-
-    def generate(self, mp_corr, mp_mean, mp_var, n_trial, n_bin, n_obs=1, seed=None):
+    def generate(self, mp_corr, mp_mean, mp_var, n_trial, n_bin, seed=None):
         if seed is not None:
             rnd.seed(seed)
         n_unit = len(mp_mean)
         C_mp = np.diag(mp_var)
         C_mp = np.sqrt(C_mp).dot(mp_corr.dot(np.sqrt(C_mp)))
         # TODO use this C_mp = ct.covariance_matrix(mp_var, mp_corr)
-        U = rnd.multivariate_normal(mp_mean, C_mp, (n_obs, n_trial, n_bin))
+        U = rnd.multivariate_normal(mp_mean, C_mp, (n_trial, n_bin))
         # TODO use this self.rate_transform(U)
-        rate = np.zeros((n_obs, n_trial, n_bin, n_unit))
-        for o in range(n_obs):
-            for t in range(n_trial):
-                for b in range(n_bin):
-                    for c in range(n_unit):
-                        if U[o, t, b, c] > self.threshold:
-                            rate[o, t, b, c] = self.base_rate * (U[o, t, b, c] - self.threshold) ** self.exponent
-        spike_count = np.floor(np.sum(rate, axis=2))  # n_obs x n_trial x n_unit
-        sc_mean = np.mean(spike_count, axis=1)  # n_obs x n_unit
-        sc_var = np.var(spike_count, axis=1)
-        sc_corr = np.zeros((n_obs, n_unit, n_unit))
-        for o in range(n_obs):
-            sc_corr[o, :, :] = np.corrcoef(spike_count[o, :, :].T)
+        rate = np.zeros((n_trial, n_bin, n_unit))
+        for t in range(n_trial):
+            for b in range(n_bin):
+                for c in range(n_unit):
+                    if U[t, b, c] > self.threshold:
+                        rate[t, b, c] = self.base_rate * (U[t, b, c] - self.threshold) ** self.exponent
+        spike_count = np.floor(np.sum(rate, axis=1))  # n_trial x n_unit
+        sc_mean = np.mean(spike_count, axis=0)
+        sc_var = np.var(spike_count, axis=0)
+        sc_corr = np.corrcoef(spike_count.T)
         return sc_corr, sc_mean, sc_var
 
-    def quick_sample(self):
-        n_unit = 2
-        mu_mp = self.quick_mean * np.ones(n_unit)
-        var_mp = self.quick_var * np.ones(n_unit)
-        corr_mp = np.array([[1, self.quick_corr], [self.quick_corr, 1]])
-        sc_corr, sc_mean, sc_var = self.generate(corr_mp, mu_mp, var_mp, self.quick_trialnum, self.quick_binnum)
-        return sc_corr, sc_mean, sc_var
-
-    def infer(self, sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_est, n_iter, n_chains=2, seed=None, init='random', thin=1):
-        n_obs = sc_mean.shape[0]
-        n_unit = sc_mean.shape[1]
+    def infer(self, sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_est, n_iter, n_chains, seed=None, init='random', thin=1):
+        n_unit = len(sc_mean)
 
         if hasattr(n_samp_est, "__iter__"):
             stdnorm_samples = n_samp_est
@@ -86,7 +66,6 @@ class correlationMeasurementModel:
             stdnorm_samples = rnd.normal(size=(n_samp_est, n_unit))
 
         corr_dat = {
-            'n_obs': n_obs,
             'n_trial': n_trial,
             'n_bin': n_bin,
             'n_unit': n_unit,
@@ -136,7 +115,6 @@ class correlationMeasurementModel:
         return rate
 
     def evaluate_pairwise_corr_likelihood(self, n_trial, scc, mpc, mp_means, mp_vars, n_samp):
-        # TODO handle multiple observations
         # in a single bin
         mp_covmat = ct.covariance_matrix(mp_vars, np.array([[1, mpc], [mpc, 1]]))
         mp_samples = rnd.multivariate_normal(mp_means, mp_covmat, n_samp)
@@ -157,7 +135,6 @@ class correlationMeasurementModel:
             return st.beta.pdf((scc + 1) / 2.0, beta_shape, beta_rate) / 2.0
 
     def pairwise_corr_numerical_posterior(self, n_trial, sc_corr, n_transform_samples, n_marginal_samples, n_eval_points):
-        # TODO handle multiple observations
         n_unit = 2
         eval_points = np.linspace(-1, 1, n_eval_points)
         posterior = np.zeros(n_eval_points)
@@ -179,6 +156,3 @@ class correlationMeasurementModel:
         posterior = posterior / np.sum(posterior)
         # posterior = posterior / (np.sum(posterior) * (2 / len(eval_points)))
         return posterior
-
-    def plot_inference(sc_corr, sc_mean, sc_var, post_corr, post_mean, post_var, true_corr=None, true_mean=None, true_var=None):
-        pass
