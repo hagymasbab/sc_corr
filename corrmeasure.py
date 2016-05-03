@@ -4,6 +4,7 @@ import scipy.stats as st
 import scipy.special as fn
 import pickle
 import csnltools as ct
+import matplotlib.pyplot as pl
 
 
 def corr_error_pdf(r, trueR, n):
@@ -15,6 +16,11 @@ def corr_error_pdf(r, trueR, n):
     num_hyp = fn.hyp2f1(0.5, 0.5, (2 * n - 1) / 2, (trueR * r + 1) / 2)
     return (num_const * num_rho * num_r * num_hyp) / (den_const * den_rhor)
 
+def var_error_pdf(v, trueV, n):
+    return st.gamma.pdf(v, (n - 1) / 2, 2 * trueV / n)
+
+def mean_error_pdf(m, trueM, trueV, n):
+    return st.normal.pdf(m, trueM, np.sqrt(trueV) / np.sqrt(n))
 
 def corr_dist_moments(true_corr, n_trial):
     obs_corr_mean = true_corr - ((1 - true_corr) ** 2 / (2 * (n_trial - 1)))
@@ -180,5 +186,69 @@ class correlationMeasurementModel:
         # posterior = posterior / (np.sum(posterior) * (2 / len(eval_points)))
         return posterior
 
-    def plot_inference(sc_corr, sc_mean, sc_var, post_corr, post_mean, post_var, true_corr=None, true_mean=None, true_var=None):
-        pass
+    def plot_inference(self, sc_corr, sc_mean, sc_var, post_corr, post_mean, post_var, true_corr=None, true_mean=None, true_var=None, n_trial=None):
+        # TODO handle numerical posteriors too
+        n_obs = sc_mean.shape[0]
+        n_unit = sc_mean.shape[1]
+        n_pairs = n_unit * (n_unit - 1) / 2
+
+        nn_corr = None
+        nn_mean = None
+        nn_var = None        
+        if true_corr is not None:
+            nn_corr, nn_mean, nn_var = self.generate(true_corr, true_mean, true_var, n_trial*1000, 1, n_obs=1)
+            
+
+        mp_col = 'red'
+        sc_nn_col = 'green'
+        sc_obs_col = 'black'
+        hist_col = 'grey'
+
+        num_row = 3
+        num_col = max([n_unit, n_pairs])
+
+        act_row = 0
+        act_col = 1
+        for i in range(n_pairs):            
+            pl.subplot(num_row, num_col, i + 1)
+            pl.hist(post_corr[:, act_row, act_col], bins=40, normed=1, facecolor=hist_col, edgecolor=hist_col)
+            if true_corr is not None:
+                x_dense = np.linspace(-1, 1, 200)            
+                corr_distr = np.zeros(len(x_dense))                
+                for i in range(len(x_dense)):
+                    corr_distr[i] = corr_error_pdf(x_dense[i], nn_corr[0, act_row, act_col], n_trial)                
+                pl.plot(x_dense, corr_distr, color=sc_nn_col, linewidth=2)
+                pl.plot(true_corr[act_row, act_col] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+            for o in range(n_obs):
+                pl.plot(sc_corr[o, act_row, act_col] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+            
+            pl.xlim([-1, 1])
+            if i == 0:
+                pl.ylabel('MP corr')
+            pl.title('Pair %d %d' % (act_row, act_col))
+
+            act_col += 1
+            if act_col == n_unit:
+                act_row += 1
+                act_col = act_row + 1
+
+        for i in range(n_unit):
+            pl.subplot(num_row, num_col, num_col + i + 1)
+            pl.hist(post_mean[:, i], bins=40)
+            # pl.plot(mu_mp[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+            # if n_bin < 5:
+            #     pl.plot(sc_true_mean_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
+            #     pl.plot(sc_mean_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+            if i == 0:
+                pl.ylabel('MP mean')
+            pl.title('Unit %d' % i)
+
+            pl.subplot(num_row, num_col, 2 * num_col + i + 1)
+            pl.hist(post_var[:, i], bins=40)
+            # pl.plot(var_mp[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+            # if n_bin < 5:
+                # pl.plot(sc_true_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
+                # pl.plot(sc_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+            if i == 0:
+                pl.ylabel('MP var')
+        pl.show()

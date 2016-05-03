@@ -63,3 +63,7 @@ def pdf_std(x, pdf):
 
 def beta_over_correlations(x, shape, rate):
     return st.beta.pdf((x + 1) / 2, shape, rate) / 2
+
+
+def corrmat_2by2(c):
+    return np.array([[1, c], [c, 1]])
