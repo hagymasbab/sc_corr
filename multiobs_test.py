@@ -10,6 +10,6 @@ import numpy as np
 #     pickle.dump(sm, f)
 
 cmm = cMM('corrmeasure.pkl')
-sc_corr, sc_mean, sc_var = cmm.quick_sample()
+sc_corr, sc_mean, sc_var = cmm.quick_sample(1)
 mps_corr, mps_mean, mps_var = cmm.infer(sc_corr, sc_mean, sc_var, 100, 1, 100, 1000)
-cmm.plot_inference(sc_corr, sc_mean, sc_var, mps_corr, mps_mean, mps_var, ct.corrmat_2by2(cmm.quick_corr), np.ones(2)*cmm.quick_mean, np.ones(2)*cmm.quick_var, cmm.quick_trialnum)
+cmm.plot_inference(sc_corr, sc_mean, sc_var, mps_corr, mps_mean, mps_var, ct.corrmat_2by2(cmm.quick_corr), np.ones(2) * cmm.quick_mean, np.ones(2) * cmm.quick_var, cmm.quick_trialnum)

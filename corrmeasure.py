@@ -16,11 +16,14 @@ def corr_error_pdf(r, trueR, n):
     num_hyp = fn.hyp2f1(0.5, 0.5, (2 * n - 1) / 2, (trueR * r + 1) / 2)
     return (num_const * num_rho * num_r * num_hyp) / (den_const * den_rhor)
 
+
 def var_error_pdf(v, trueV, n):
     return st.gamma.pdf(v, (n - 1) / 2, 2 * trueV / n)
 
+
 def mean_error_pdf(m, trueM, trueV, n):
-    return st.normal.pdf(m, trueM, np.sqrt(trueV) / np.sqrt(n))
+    return st.norm.pdf(m, trueM, np.sqrt(trueV) / np.sqrt(n))
+
 
 def corr_dist_moments(true_corr, n_trial):
     obs_corr_mean = true_corr - ((1 - true_corr) ** 2 / (2 * (n_trial - 1)))
@@ -47,7 +50,7 @@ class correlationMeasurementModel:
         self.quick_var = 1
         self.quick_corr = 0.5
         self.quick_trialnum = 100
-        self.quick_binnum = 100
+        self.quick_binnum = 1
 
     def generate(self, mp_corr, mp_mean, mp_var, n_trial, n_bin, n_obs=1, seed=None):
         if seed is not None:
@@ -57,6 +60,7 @@ class correlationMeasurementModel:
         C_mp = np.sqrt(C_mp).dot(mp_corr.dot(np.sqrt(C_mp)))
         # TODO use this C_mp = ct.covariance_matrix(mp_var, mp_corr)
         U = rnd.multivariate_normal(mp_mean, C_mp, (n_obs, n_trial, n_bin))
+        print U.shape
         # TODO use this self.rate_transform(U)
         rate = np.zeros((n_obs, n_trial, n_bin, n_unit))
         for o in range(n_obs):
@@ -64,7 +68,7 @@ class correlationMeasurementModel:
                 for b in range(n_bin):
                     for c in range(n_unit):
                         if U[o, t, b, c] > self.threshold:
-                            rate[o, t, b, c] = self.base_rate * (U[o, t, b, c] - self.threshold) ** self.exponent
+                            rate[o, t, b, c] = self.base_rate * ((U[o, t, b, c] - self.threshold) ** self.exponent)
         spike_count = np.floor(np.sum(rate, axis=2))  # n_obs x n_trial x n_unit
         sc_mean = np.mean(spike_count, axis=1)  # n_obs x n_unit
         sc_var = np.var(spike_count, axis=1)
@@ -73,12 +77,12 @@ class correlationMeasurementModel:
             sc_corr[o, :, :] = np.corrcoef(spike_count[o, :, :].T)
         return sc_corr, sc_mean, sc_var
 
-    def quick_sample(self):
+    def quick_sample(self, n_obs):
         n_unit = 2
         mu_mp = self.quick_mean * np.ones(n_unit)
         var_mp = self.quick_var * np.ones(n_unit)
         corr_mp = np.array([[1, self.quick_corr], [self.quick_corr, 1]])
-        sc_corr, sc_mean, sc_var = self.generate(corr_mp, mu_mp, var_mp, self.quick_trialnum, self.quick_binnum)
+        sc_corr, sc_mean, sc_var = self.generate(corr_mp, mu_mp, var_mp, self.quick_trialnum, self.quick_binnum, n_obs=n_obs)
         return sc_corr, sc_mean, sc_var
 
     def infer(self, sc_corr, sc_mean, sc_var, n_trial, n_bin, n_samp_est, n_iter, n_chains=2, seed=None, init='random', thin=1):
@@ -143,7 +147,7 @@ class correlationMeasurementModel:
 
     def evaluate_pairwise_corr_likelihood(self, n_trial, scc, mpc, mp_means, mp_vars, n_samp):
         # TODO handle multiple observations
-        # in a single bin
+        # TODO handle more than 1 bins
         mp_covmat = ct.covariance_matrix(mp_vars, np.array([[1, mpc], [mpc, 1]]))
         mp_samples = rnd.multivariate_normal(mp_means, mp_covmat, n_samp)
         rate_samples = self.rate_transform(mp_samples)
@@ -188,16 +192,19 @@ class correlationMeasurementModel:
 
     def plot_inference(self, sc_corr, sc_mean, sc_var, post_corr, post_mean, post_var, true_corr=None, true_mean=None, true_var=None, n_trial=None):
         # TODO handle numerical posteriors too
+        # TODO support multiple bins
+
+        pl.figure(figsize=(20, 10))
+
         n_obs = sc_mean.shape[0]
         n_unit = sc_mean.shape[1]
         n_pairs = n_unit * (n_unit - 1) / 2
 
         nn_corr = None
         nn_mean = None
-        nn_var = None        
+        nn_var = None
         if true_corr is not None:
-            nn_corr, nn_mean, nn_var = self.generate(true_corr, true_mean, true_var, n_trial*1000, 1, n_obs=1)
-            
+            nn_corr, nn_mean, nn_var = self.generate(true_corr, true_mean, true_var, n_trial * 1000, 1, n_obs=1)
 
         mp_col = 'red'
         sc_nn_col = 'green'
@@ -209,22 +216,29 @@ class correlationMeasurementModel:
 
         act_row = 0
         act_col = 1
-        for i in range(n_pairs):            
+        for i in range(n_pairs):
             pl.subplot(num_row, num_col, i + 1)
-            pl.hist(post_corr[:, act_row, act_col], bins=40, normed=1, facecolor=hist_col, edgecolor=hist_col)
+            pl.hist(post_corr[:, act_row, act_col], bins=40, normed=1, facecolor=hist_col, edgecolor=hist_col, label='Posterior')
             if true_corr is not None:
-                x_dense = np.linspace(-1, 1, 200)            
-                corr_distr = np.zeros(len(x_dense))                
-                for i in range(len(x_dense)):
-                    corr_distr[i] = corr_error_pdf(x_dense[i], nn_corr[0, act_row, act_col], n_trial)                
-                pl.plot(x_dense, corr_distr, color=sc_nn_col, linewidth=2)
-                pl.plot(true_corr[act_row, act_col] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+                x_dense = np.linspace(-1, 1, 200)
+                samp_distr = np.zeros(len(x_dense))
+                for xi in range(len(x_dense)):
+                    samp_distr[xi] = corr_error_pdf(x_dense[xi], nn_corr[0, act_row, act_col], n_trial)
+                pl.plot(x_dense, samp_distr, color=sc_nn_col, linewidth=2, label='SC obs. samp. dist.')
+                pl.plot(true_corr[act_row, act_col] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2, label='MP ground truth')
             for o in range(n_obs):
-                pl.plot(sc_corr[o, act_row, act_col] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
-            
+                if o == 0:
+                    pl.plot(sc_corr[o, act_row, act_col] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2, label='SC observation')
+                else:
+                    pl.plot(sc_corr[o, act_row, act_col] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+
             pl.xlim([-1, 1])
             if i == 0:
                 pl.ylabel('MP corr')
+                if sc_corr[0, 0, 1] > 0:
+                    pl.legend(loc=2)
+                else:
+                    pl.legend(loc=1)
             pl.title('Pair %d %d' % (act_row, act_col))
 
             act_col += 1
@@ -234,11 +248,18 @@ class correlationMeasurementModel:
 
         for i in range(n_unit):
             pl.subplot(num_row, num_col, num_col + i + 1)
-            pl.hist(post_mean[:, i], bins=40)
-            # pl.plot(mu_mp[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
-            # if n_bin < 5:
-            #     pl.plot(sc_true_mean_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
-            #     pl.plot(sc_mean_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+
+            pl.hist(post_mean[:, i], bins=40, normed=1, facecolor=hist_col, edgecolor=hist_col)
+            if true_corr is not None:
+                x_dense = np.linspace(pl.gca().get_xlim()[0] - 1, np.max(sc_mean[:, i]) + 1, 200)
+                samp_distr = np.zeros(len(x_dense))
+                for xi in range(len(x_dense)):
+                    samp_distr[xi] = mean_error_pdf(x_dense[xi], nn_mean[0, i], nn_var[0, i], n_trial)
+                pl.plot(x_dense, samp_distr, color=sc_nn_col, linewidth=2)
+                pl.plot(true_mean[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+            for o in range(n_obs):
+                pl.plot(sc_mean[o, i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+
             if i == 0:
                 pl.ylabel('MP mean')
             pl.title('Unit %d' % i)
@@ -247,8 +268,8 @@ class correlationMeasurementModel:
             pl.hist(post_var[:, i], bins=40)
             # pl.plot(var_mp[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
             # if n_bin < 5:
-                # pl.plot(sc_true_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
-                # pl.plot(sc_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+            #   pl.plot(sc_true_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
+            #   pl.plot(sc_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
             if i == 0:
                 pl.ylabel('MP var')
         pl.show()
