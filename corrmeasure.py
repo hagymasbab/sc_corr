@@ -12,7 +12,7 @@ def corr_error_pdf(r, trueR, n):
     num_rho = (1 - trueR ** 2) ** ((n - 1) / 2)
     num_r = (1 - r ** 2) ** ((n - 4) / 2)
     den_const = np.sqrt(2 * np.pi) * fn.gamma(n - 0.5)
-    den_rhor = (1 - trueR * r) ** (n - 1.5)
+    den_rhor = (1 - trueR * r) ** (n - 1.5)  # TODO prevent overflow here
     num_hyp = fn.hyp2f1(0.5, 0.5, (2 * n - 1) / 2, (trueR * r + 1) / 2)
     return (num_const * num_rho * num_r * num_hyp) / (den_const * den_rhor)
 
@@ -48,8 +48,8 @@ class correlationMeasurementModel:
 
         self.quick_mean = 2
         self.quick_var = 1
-        self.quick_corr = 0.5
-        self.quick_trialnum = 100
+        self.quick_corr = -0.5
+        self.quick_trialnum = 100000
         self.quick_binnum = 1
 
     def generate(self, mp_corr, mp_mean, mp_var, n_trial, n_bin, n_obs=1, seed=None):
@@ -60,7 +60,6 @@ class correlationMeasurementModel:
         C_mp = np.sqrt(C_mp).dot(mp_corr.dot(np.sqrt(C_mp)))
         # TODO use this C_mp = ct.covariance_matrix(mp_var, mp_corr)
         U = rnd.multivariate_normal(mp_mean, C_mp, (n_obs, n_trial, n_bin))
-        print U.shape
         # TODO use this self.rate_transform(U)
         rate = np.zeros((n_obs, n_trial, n_bin, n_unit))
         for o in range(n_obs):
@@ -145,15 +144,17 @@ class correlationMeasurementModel:
                 rate[u, s] = self.base_rate * thr_mp ** self.exponent
         return rate
 
-    def evaluate_pairwise_corr_likelihood(self, n_trial, scc, mpc, mp_means, mp_vars, n_samp):
+    def evaluate_pairwise_corr_likelihood(self, n_trial, scc, sc_means, sc_vars, mpc, mp_means, mp_vars, n_samp):
         # TODO handle multiple observations
         # TODO handle more than 1 bins
         mp_covmat = ct.covariance_matrix(mp_vars, np.array([[1, mpc], [mpc, 1]]))
         mp_samples = rnd.multivariate_normal(mp_means, mp_covmat, n_samp)
         rate_samples = self.rate_transform(mp_samples)
-        # print rate_samples
+        print rate_samples.shape
         rate_corr = ct.correlation(rate_samples.T)
-        # print rate_corr
+        rate_means = np.mean(rate_samples)
+
+        # TODO replace this with evaluations of the three pdfs
         obs_corr_mean, obs_corr_var = corr_dist_moments(rate_corr, n_trial)
         if obs_corr_var == 0.0:
             obs_corr_var = 0.001
@@ -166,7 +167,8 @@ class correlationMeasurementModel:
         else:
             return st.beta.pdf((scc + 1) / 2.0, beta_shape, beta_rate) / 2.0
 
-    def pairwise_corr_numerical_posterior(self, n_trial, sc_corr, n_transform_samples, n_marginal_samples, n_eval_points):
+    def pairwise_corr_numerical_posterior(self, n_trial, sc_corr, sc_means, sc_vars, n_transform_samples, n_marginal_samples, n_eval_points):
+        # TODO include single-cell statistics to likelihood
         # TODO handle multiple observations
         n_unit = 2
         eval_points = np.linspace(-1, 1, n_eval_points)
@@ -175,10 +177,11 @@ class correlationMeasurementModel:
         mean_samples = self.sample_mean_prior(n_marginal_samples, n_unit)
         var_samples = self.sample_variance_prior(n_marginal_samples, n_unit)
         for i in range(n_eval_points):
+            ct.printProgress(i, n_eval_points, prefix='Progress:', suffix='Complete', barLength=50)
             act_mpc = eval_points[i]
             marginal_likelihood = 0.0
             for l in range(n_marginal_samples):
-                act_marginal_likelihood = self.evaluate_pairwise_corr_likelihood(n_trial, sc_corr, act_mpc, mean_samples[:, l], var_samples[:, l], n_transform_samples)
+                act_marginal_likelihood = self.evaluate_pairwise_corr_likelihood(n_trial, sc_corr, sc_means, sc_vars, act_mpc, mean_samples[:, l], var_samples[:, l], n_transform_samples)
                 # print act_marginal_likelihood
                 if np.isnan(act_marginal_likelihood):
                     raise ValueError("nan in the likelihood")
@@ -186,8 +189,8 @@ class correlationMeasurementModel:
             act_prior = self.evaluate_corr_prior(act_mpc)
             posterior[i] = marginal_likelihood * act_prior
         # print posterior
-        posterior = posterior / np.sum(posterior)
-        # posterior = posterior / (np.sum(posterior) * (2 / len(eval_points)))
+        # posterior = posterior / np.sum(posterior)
+        posterior = posterior / (np.sum(posterior) * (2.0 / len(eval_points)))
         return posterior
 
     def plot_inference(self, sc_corr, sc_mean, sc_var, post_corr, post_mean, post_var, true_corr=None, true_mean=None, true_var=None, n_trial=None):
@@ -204,7 +207,7 @@ class correlationMeasurementModel:
         nn_mean = None
         nn_var = None
         if true_corr is not None:
-            nn_corr, nn_mean, nn_var = self.generate(true_corr, true_mean, true_var, n_trial * 1000, 1, n_obs=1)
+            nn_corr, nn_mean, nn_var = self.generate(true_corr, true_mean, true_var, 100000, 1, n_obs=1)
 
         mp_col = 'red'
         sc_nn_col = 'green'
@@ -265,11 +268,54 @@ class correlationMeasurementModel:
             pl.title('Unit %d' % i)
 
             pl.subplot(num_row, num_col, 2 * num_col + i + 1)
-            pl.hist(post_var[:, i], bins=40)
-            # pl.plot(var_mp[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
-            # if n_bin < 5:
-            #   pl.plot(sc_true_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_true_col, linestyle='-', linewidth=2)
-            #   pl.plot(sc_var_vec[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+            pl.hist(post_var[:, i], bins=40, normed=1, facecolor=hist_col, edgecolor=hist_col)
+            if true_corr is not None:
+                x_dense = np.linspace(pl.gca().get_xlim()[0] - 1, np.max(sc_var[:, i]) + 1, 200)
+                samp_distr = np.zeros(len(x_dense))
+                for xi in range(len(x_dense)):
+                    samp_distr[xi] = var_error_pdf(x_dense[xi], nn_var[0, i], n_trial)
+                pl.plot(x_dense, samp_distr, color=sc_nn_col, linewidth=2)
+                pl.plot(true_var[i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2)
+            for o in range(n_obs):
+                pl.plot(sc_var[o, i] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
             if i == 0:
                 pl.ylabel('MP var')
+        pl.show()
+
+    def plot_numerical_inference(self, sc_corr, post_corr, true_corr=None, true_mean=None, true_var=None, n_trial=None):
+        # TODO merge this with the previous function
+        n_obs = sc_corr.shape[0]
+
+        nn_corr = None
+        nn_mean = None
+        nn_var = None
+        if true_corr is not None:
+            nn_corr, nn_mean, nn_var = self.generate(true_corr, true_mean, true_var, 100000, 1, n_obs=1)
+
+        mp_col = 'red'
+        sc_nn_col = 'green'
+        sc_obs_col = 'black'
+        hist_col = 'grey'
+
+        x = np.linspace(-1, 1, len(post_corr))
+        pl.fill_between(x, post_corr, facecolor=hist_col)
+        pl.plot(x, post_corr, color=hist_col, label='Posterior', linewidth=4)
+        if true_corr is not None:
+            x_dense = np.linspace(-1, 1, 200)
+            samp_distr = np.zeros(len(x_dense))
+            for xi in range(len(x_dense)):
+                samp_distr[xi] = corr_error_pdf(x_dense[xi], nn_corr[0, 0, 1], n_trial)
+            pl.plot(x_dense, samp_distr, color=sc_nn_col, linewidth=2, label='SC obs. samp. dist.')
+            pl.plot(true_corr[0, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=mp_col, linestyle='-', linewidth=2, label='MP ground truth')
+        for o in range(n_obs):
+            if o == 0:
+                pl.plot(sc_corr[o, 0, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2, label='SC observation')
+            else:
+                pl.plot(sc_corr[o, 0, 1] * np.ones((1, 2)).T, [0, pl.gca().get_ylim()[1]], color=sc_obs_col, linestyle='-', linewidth=2)
+
+        pl.xlim([-1, 1])
+        if sc_corr[0, 0, 1] > 0:
+            pl.legend(loc=2)
+        else:
+            pl.legend(loc=1)
         pl.show()
