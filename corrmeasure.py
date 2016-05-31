@@ -22,7 +22,10 @@ def var_error_pdf(v, trueV, n):
 
 
 def mean_error_pdf(m, trueM, trueV, n):
-    return st.norm.pdf(m, trueM, np.sqrt(trueV) / np.sqrt(n))
+    if trueV == 0:
+        return 0
+    else:
+        return st.norm.pdf(m, trueM, np.sqrt(trueV) / np.sqrt(n))
 
 
 def corr_dist_moments(true_corr, n_trial):
@@ -48,7 +51,7 @@ class correlationMeasurementModel:
 
         self.quick_mean = 2
         self.quick_var = 1
-        self.quick_corr = -0.5
+        self.quick_corr = 0.5
         self.quick_trialnum = 100000
         self.quick_binnum = 1
 
@@ -147,25 +150,35 @@ class correlationMeasurementModel:
     def evaluate_pairwise_corr_likelihood(self, n_trial, scc, sc_means, sc_vars, mpc, mp_means, mp_vars, n_samp):
         # TODO handle multiple observations
         # TODO handle more than 1 bins
+        n_unit = 2
         mp_covmat = ct.covariance_matrix(mp_vars, np.array([[1, mpc], [mpc, 1]]))
         mp_samples = rnd.multivariate_normal(mp_means, mp_covmat, n_samp)
         rate_samples = self.rate_transform(mp_samples)
-        print rate_samples.shape
         rate_corr = ct.correlation(rate_samples.T)
-        rate_means = np.mean(rate_samples)
+        rate_means = np.mean(rate_samples, axis=0)
+        rate_vars = np.var(rate_samples, axis=0)
 
-        # TODO replace this with evaluations of the three pdfs
-        obs_corr_mean, obs_corr_var = corr_dist_moments(rate_corr, n_trial)
-        if obs_corr_var == 0.0:
-            obs_corr_var = 0.001
-        # print obs_corr_mean, obs_corr_var
-        beta_shape, beta_rate = ct.beta_params_from_moments((obs_corr_mean + 1) / 2.0, obs_corr_var / 4.0)
-        # print beta_shape, beta_rate
-        # TODO these might be inappropriate
-        if beta_shape > 100 or beta_rate > 100 or beta_shape < 0 or beta_rate < 0:
-            return 0
-        else:
-            return st.beta.pdf((scc + 1) / 2.0, beta_shape, beta_rate) / 2.0
+        # # TODO replace this with evaluations of the three pdfs
+        # obs_corr_mean, obs_corr_var = corr_dist_moments(rate_corr, n_trial)
+        # if obs_corr_var == 0.0:
+        #     obs_corr_var = 0.001
+        # # print obs_corr_mean, obs_corr_var
+        # beta_shape, beta_rate = ct.beta_params_from_moments((obs_corr_mean + 1) / 2.0, obs_corr_var / 4.0)
+        # # print beta_shape, beta_rate
+        # # TODO these might be inappropriate
+        # if beta_shape > 100 or beta_rate > 100 or beta_shape < 0 or beta_rate < 0:
+        #     return 0
+        # else:
+        #     return st.beta.pdf((scc + 1) / 2.0, beta_shape, beta_rate) / 2.0
+
+        corr_like = corr_error_pdf(scc, rate_corr, n_trial)
+        mean_like = 1
+        var_like = 1
+        for u in range(n_unit):
+            mean_like *= mean_error_pdf(sc_means[0, u], rate_means[u], rate_vars[u], n_trial)
+            var_like *= var_error_pdf(sc_vars[0, u], rate_vars[u], n_trial)
+
+        return corr_like * mean_like * var_like
 
     def pairwise_corr_numerical_posterior(self, n_trial, sc_corr, sc_means, sc_vars, n_transform_samples, n_marginal_samples, n_eval_points):
         # TODO include single-cell statistics to likelihood
