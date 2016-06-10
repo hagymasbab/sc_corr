@@ -44,6 +44,11 @@ for i in range(res):
 
 # print like_landscape_indep
 total_sum_indep = np.sum(np.sum(like_landscape_indep))
+total_sum_coupled = np.sum(np.sum(like_landscape_coupled))
+ent_indep = st.entropy(like_landscape_indep.flatten())
+ent_coupled = st.entropy(like_landscape_coupled.flatten())
+print ent_indep
+print ent_coupled
 
 ax1 = plt.subplot(2, 2, 1)
 ct.heatmapPlot(ax1, like_landscape_indep, corr_vals, corr_vals, 'likelihood')
@@ -52,9 +57,9 @@ ct.heatmapPlot(ax1, like_landscape_coupled, corr_vals, corr_vals, 'likelihood')
 # corr_vals_dense = np.linspace(-0.9, 0.9, 200)
 # plt.plot(res * corr_vals_dense, coupling_12 * corr_vals_dense, linewidth=2, color='red')
 plt.subplot(2, 2, 3)
-plt.plot(corr_vals, np.sum(like_landscape_indep, axis=1) ./ total_sum_indep, color='blue', linewidth=3)
-plt.plot(corr_vals, np.sum(like_landscape_coupled, axis=1), color='red')
+plt.plot(corr_vals, np.sum(like_landscape_indep, axis=1) / total_sum_indep, color='blue', linewidth=3)
+plt.plot(corr_vals, np.sum(like_landscape_coupled, axis=1) / total_sum_coupled, color='red', linewidth=2)
 plt.subplot(2, 2, 4)
-plt.plot(corr_vals, np.sum(like_landscape_indep, axis=0), color='blue', linewidth=3)
-plt.plot(corr_vals, np.sum(like_landscape_coupled, axis=0), color='red')
+plt.plot(corr_vals, np.sum(like_landscape_indep, axis=0) / total_sum_indep, color='blue', linewidth=3)
+plt.plot(corr_vals, np.sum(like_landscape_coupled, axis=0) / total_sum_coupled, color='red', linewidth=2)
 plt.show()
