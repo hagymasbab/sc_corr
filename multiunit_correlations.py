@@ -28,8 +28,8 @@ def samp_mixture(n_samp, coeffs, means, stds):
 
 
 firstMixtureCoeff = [1, 1, 1]
-mixtureMean = [[0.1, -0.5], [0.1, -0.5], [0.01, 0.1]]
-mixtureStd = [[0.01, 0.01], [0.01, 0.01], [0.001, 0.001]]
+mixtureMean = [[-0.01, -0.5], [0.01, -0.5], [0, 0.1]]
+mixtureStd = [[0.1, 0.01], [0.1, 0.01], [0.1, 0.001]]
 colors = ["red", "green", "blue"]
 
 x = np.linspace(-1, 1, 1000)
@@ -39,7 +39,7 @@ for ii in range(3):
     y = eval_mixture(x, np.array([firstMixtureCoeff[ii], 1-firstMixtureCoeff[ii]]), mixtureMean[ii], mixtureStd[ii])
     pl.plot(x, y)
 
-unitNums = [2, 3, 5, 8, 10, 20, 30, 50]
+unitNums = [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20]
 # unitNums = [2, 3]
 n_corr_group = unitNums[-1] * (unitNums[-1] - 1) / 2
 n_corr_inter = unitNums[-1] ** 2
@@ -50,7 +50,7 @@ for ii in range(2):
 inter_corrs = samp_mixture(n_corr_inter, np.array([firstMixtureCoeff[2], 1-firstMixtureCoeff[2]]), mixtureMean[2], mixtureStd[2])
 # TODO set values between -1 and 1
 
-n_reest = 10
+n_reest = 1000
 
 allCorrs = np.zeros((n_reest, len(unitNums)))
 for r in range(n_reest):
@@ -73,6 +73,6 @@ for r in range(n_reest):
     allCorrs[r, :] = summedCorrs
 
 pl.subplot(1, 2, 2)
-pl.errorbar(unitNums, np.mean(allCorrs, axis=0), yerr=st.sem(allCorrs, axis=0))
+pl.errorbar(unitNums, np.mean(allCorrs, axis=0), yerr=np.std(allCorrs, axis=0))
 
 pl.show()
