@@ -26,10 +26,11 @@ def samp_mixture(n_samp, coeffs, means, stds):
         samps[i] = rn.normal(means[act_comp], stds[act_comp])
     return samps
 
+cSD = 0.001
 
 firstMixtureCoeff = [1, 1, 1]
-mixtureMean = [[-0.01, -0.5], [0.01, -0.5], [0, 0.1]]
-mixtureStd = [[0.1, 0.01], [0.1, 0.01], [0.1, 0.001]]
+mixtureMean = [[-0.01, -0.5], [0.01, -0.5], [0.5, 0.1]]
+mixtureStd = [[cSD, 0.01], [cSD, 0.01], [cSD, 0.001]]
 colors = ["red", "green", "blue"]
 
 x = np.linspace(-1, 1, 1000)
@@ -50,7 +51,7 @@ for ii in range(2):
 inter_corrs = samp_mixture(n_corr_inter, np.array([firstMixtureCoeff[2], 1-firstMixtureCoeff[2]]), mixtureMean[2], mixtureStd[2])
 # TODO set values between -1 and 1
 
-n_reest = 1000
+n_reest = 100
 
 allCorrs = np.zeros((n_reest, len(unitNums)))
 for r in range(n_reest):
